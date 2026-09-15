@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express';
+﻿import { NextFunction, Request, Response } from 'express';
 import { ApiError } from '../shared/catchAsync';
 import { AuthUser } from './auth';
 
@@ -17,3 +17,8 @@ export const authorize =
     }
     next();
   };
+
+// Named role middlewares (strict RBAC)
+export const requireCandidate = authorize('CANDIDATE');
+export const requireRecruiter = authorize('RECRUITER');
+export const requireAdmin = authorize('ADMIN');
