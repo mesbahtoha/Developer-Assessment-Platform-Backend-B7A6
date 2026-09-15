@@ -8,6 +8,8 @@ import { notFound } from './middlewares/notFound';
 import { authRoutes } from './modules/auth/auth.routes';
 import { userRoutes } from './modules/user/user.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
+import { problemRoutes } from './modules/problem/problem.routes';
+import { assessmentRoutes } from './modules/assessment/assessment.routes';
 
 const app: Application = express();
 
@@ -47,8 +49,9 @@ app.get('/', (_req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/problems', problemRoutes);
+app.use('/api/v1/assessments', assessmentRoutes);
 // Future modules mount here:
-// app.use('/api/v1/assessments', assessmentRoutes);
 // app.use('/api/v1/attempts', attemptRoutes);
 // app.use('/api/v1/payments', paymentRoutes);
 
