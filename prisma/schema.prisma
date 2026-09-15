@@ -7,49 +7,137 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============ ENUMS ============
+
 enum Role {
   CANDIDATE
   RECRUITER
   ADMIN
 }
 
-enum QuestionType {
+// Assessment lifecycle
+enum AssessmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+// Attempt lifecycle
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EVALUATED
+  EXPIRED
+}
+
+// Submission lifecycle
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  EVALUATED
+}
+
+// Invitation lifecycle
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+// Payment lifecycle
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ProblemType {
   MCQ
   CODE
 }
 
-enum AttemptStatus {
-  STARTED
-  SUBMITTED
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
 }
 
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
+enum EvaluationMethod {
+  AUTO
+  MANUAL
 }
+
+
+// ============ IDENTITY ============
 
 model User {
-  id          String    @id @default(uuid())
-  name        String
-  email       String    @unique
-  password    String?
-  googleId    String?   @unique
-  role        Role      @default(CANDIDATE)
-  isDeleted   Boolean   @default(false)
-  deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String?
+  googleId  String?   @unique
+  avatarUrl String?
+  role      Role      @default(CANDIDATE)
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  refreshTokens RefreshToken[]
-  assessments   Assessment[]
-  attempts      Attempt[]
-  payments      Payment[]
-  auditLogs     AuditLog[]
+  candidateProfile CandidateProfile?
+  recruiterProfile RecruiterProfile?
+  refreshTokens    RefreshToken[]
+  createdProblems  Problem[]
+  assessments      Assessment[]      @relation("RecruiterAssessments")
+  invitationsSent  Invitation[]      @relation("InvitationsSent")
+  invitations      Invitation[]      @relation("CandidateInvitations")
+  attempts         Attempt[]
+  payments         Payment[]
+  evaluationsDone  Evaluation[]
+  auditLogs        AuditLog[]
 
   @@index([role])
   @@index([createdAt])
 }
+
+model CandidateProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  phone           String?
+  headline        String?
+  bio             String?
+  skills          String[] @default([])
+  experienceYears Int?
+  githubUrl       String?
+  linkedinUrl     String?
+  portfolioUrl    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RecruiterProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  companyName    String
+  companyWebsite String?
+  companyLogoUrl String?
+  designation    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============ AUTH SESSIONS ============
 
 model RefreshToken {
   id        String    @id @default(uuid())
@@ -64,80 +152,213 @@ model RefreshToken {
   @@index([userId])
 }
 
-model Assessment {
-  id          String    @id @default(uuid())
-  title       String
-  description String
-  price       Int       @default(0) // cents; 0 = free
-  durationMin Int       @default(60)
-  isPublished Boolean   @default(false)
-  recruiterId String
-  isDeleted   Boolean   @default(false)
-  deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
 
-  recruiter User       @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
-  questions Question[]
-  attempts  Attempt[]
-  payments  Payment[]
+// ============ PROBLEM BANK ============
 
-  @@index([recruiterId])
-  @@index([isPublished])
+model Problem {
+  id            String      @id @default(uuid())
+  title         String
+  type          ProblemType @default(MCQ)
+  difficulty    Difficulty  @default(EASY)
+  prompt        String
+  options       Json? // MCQ options
+  correctAnswer String // option text (MCQ) / expected solution (CODE)
+  points        Int         @default(1)
+  tags          String[]    @default([])
+  createdById   String
+  isDeleted     Boolean     @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  createdBy          User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  assessmentProblems AssessmentProblem[]
+  submissions        Submission[]
+
+  @@index([createdById])
+  @@index([type])
+  @@index([difficulty])
   @@index([createdAt])
 }
 
-model Question {
-  id            String       @id @default(uuid())
-  type          QuestionType @default(MCQ)
-  prompt        String
-  options       Json?
-  correctAnswer String
-  points        Int          @default(1)
-  assessmentId  String
+// ============ ASSESSMENTS ============
+
+model Assessment {
+  id               String           @id @default(uuid())
+  title            String
+  description      String
+  status           AssessmentStatus @default(DRAFT)
+  durationMin      Int              @default(60)
+  price            Int              @default(0) // cents; 0 = free
+  currency         String           @default("usd")
+  passScorePercent Int              @default(50)
+  recruiterId      String
+  isDeleted        Boolean          @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  recruiter   User                @relation("RecruiterAssessments", fields: [recruiterId], references: [id], onDelete: Cascade)
+  problems    AssessmentProblem[]
+  invitations Invitation[]
+  attempts    Attempt[]
+  payments    Payment[]
+
+  @@index([recruiterId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Ordered problems inside an assessment, with optional point override
+model AssessmentProblem {
+  id           String @id @default(uuid())
+  assessmentId String
+  problemId    String
+  order        Int    @default(0)
+  points       Int? // overrides problem.points when set
 
   assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  problem    Problem    @relation(fields: [problemId], references: [id], onDelete: Cascade)
 
+  @@unique([assessmentId, problemId])
   @@index([assessmentId])
+  @@index([problemId])
 }
+
+// ============ INVITATIONS ============
+
+model Invitation {
+  id           String           @id @default(uuid())
+  assessmentId String
+  candidateId  String
+  invitedById  String
+  status       InvitationStatus @default(PENDING)
+  token        String           @unique @default(cuid())
+  expiresAt    DateTime?
+  respondedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  candidate  User       @relation("CandidateInvitations", fields: [candidateId], references: [id], onDelete: Cascade)
+  invitedBy  User       @relation("InvitationsSent", fields: [invitedById], references: [id], onDelete: Cascade)
+  attempts   Attempt[]
+
+  @@unique([assessmentId, candidateId]) // prevents duplicate invitations
+  @@index([candidateId])
+  @@index([assessmentId])
+  @@index([status])
+}
+
+
+// ============ ATTEMPTS / SUBMISSIONS / EVALUATION / RESULT ============
 
 model Attempt {
   id           String        @id @default(uuid())
   candidateId  String
   assessmentId String
-  status       AttemptStatus @default(STARTED)
-  score        Int?
-  totalPoints  Int?
-  answers      Json?
+  invitationId String?
+  status       AttemptStatus @default(IN_PROGRESS)
   startedAt    DateTime      @default(now())
+  deadlineAt   DateTime?
   submittedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  candidate  User       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  candidate   User         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  assessment  Assessment   @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  invitation  Invitation?  @relation(fields: [invitationId], references: [id], onDelete: SetNull)
+  submissions Submission[]
+  result      Result?
 
-  @@unique([candidateId, assessmentId])
+  @@unique([candidateId, assessmentId]) // prevents duplicate attempts
   @@index([candidateId])
   @@index([assessmentId])
+  @@index([status])
 }
 
+model Submission {
+  id            String           @id @default(uuid())
+  attemptId     String
+  problemId     String
+  answer        String? // selected option (MCQ) or code (CODE)
+  language      String? // for CODE problems
+  status        SubmissionStatus @default(PENDING)
+  pointsAwarded Int?
+  evaluatedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  attempt    Attempt     @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  problem    Problem     @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  evaluation Evaluation?
+
+  @@unique([attemptId, problemId]) // one submission per problem per attempt
+  @@index([attemptId])
+  @@index([problemId])
+  @@index([status])
+}
+
+model Evaluation {
+  id            String           @id @default(uuid())
+  submissionId  String           @unique // one evaluation per submission
+  evaluatedById String?
+  method        EvaluationMethod @default(AUTO)
+  score         Int
+  maxScore      Int              @default(1)
+  feedback      String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  evaluatedBy User?      @relation(fields: [evaluatedById], references: [id], onDelete: SetNull)
+
+  @@index([evaluatedById])
+}
+
+model Result {
+  id          String    @id @default(uuid())
+  attemptId   String    @unique // one final result per attempt
+  score       Int
+  totalPoints Int
+  percentage  Float
+  isPassed    Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+}
+
+
+// ============ PAYMENTS ============
+
 model Payment {
-  id            String        @id @default(uuid())
-  userId        String
-  assessmentId  String
-  amount        Int
-  currency      String        @default("usd")
-  status        PaymentStatus @default(PENDING)
-  stripeSessionId  String?    @unique
+  id                    String        @id @default(uuid())
+  userId                String
+  assessmentId          String
+  amount                Int
+  currency              String        @default("usd")
+  status                PaymentStatus @default(PENDING)
+  provider              String        @default("stripe")
+  stripeSessionId       String?       @unique
   stripePaymentIntentId String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  paidAt                DateTime?
+  refundedAt            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
 
-  @@index([status])
   @@index([userId])
+  @@index([assessmentId])
+  @@index([status])
+  @@index([createdAt])
 }
+
 
 model AuditLog {
   id        String   @id @default(uuid())
