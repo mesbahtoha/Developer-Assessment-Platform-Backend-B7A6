@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CANDIDATE
+  RECRUITER
+  ADMIN
+}
+
+enum QuestionType {
+  MCQ
+  CODE
+}
+
+enum AttemptStatus {
+  STARTED
+  SUBMITTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model User {
+  id          String    @id @default(uuid())
+  name        String
+  email       String    @unique
+  password    String?
+  googleId    String?   @unique
+  role        Role      @default(CANDIDATE)
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  refreshTokens RefreshToken[]
+  assessments   Assessment[]
+  attempts      Attempt[]
+  payments      Payment[]
+  auditLogs     AuditLog[]
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Assessment {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  price       Int       @default(0) // cents; 0 = free
+  durationMin Int       @default(60)
+  isPublished Boolean   @default(false)
+  recruiterId String
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  recruiter User       @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  Attempt[]
+  payments  Payment[]
+
+  @@index([recruiterId])
+  @@index([isPublished])
+  @@index([createdAt])
+}
+
+model Question {
+  id            String       @id @default(uuid())
+  type          QuestionType @default(MCQ)
+  prompt        String
+  options       Json?
+  correctAnswer String
+  points        Int          @default(1)
+  assessmentId  String
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+}
+
+model Attempt {
+  id           String        @id @default(uuid())
+  candidateId  String
+  assessmentId String
+  status       AttemptStatus @default(STARTED)
+  score        Int?
+  totalPoints  Int?
+  answers      Json?
+  startedAt    DateTime      @default(now())
+  submittedAt  DateTime?
+
+  candidate  User       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, assessmentId])
+  @@index([candidateId])
+  @@index([assessmentId])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  userId        String
+  assessmentId  String
+  amount        Int
+  currency      String        @default("usd")
+  status        PaymentStatus @default(PENDING)
+  stripeSessionId  String?    @unique
+  stripePaymentIntentId String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  action    String
+  targetType String?
+  targetId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([createdAt])
+}
