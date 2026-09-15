@@ -7,11 +7,10 @@ import { audit } from '../../shared/audit';
 import { AuthService } from './auth.service';
 import { verifyGoogleToken } from './auth.google';
 import {
-  changePasswordSchema,
-  googleLoginSchema,
-  loginSchema,
-  refreshTokenSchema,
-  registerSchema,
+  ChangePasswordInput,
+  GoogleLoginInput,
+  LoginInput,
+  RegisterInput,
 } from './auth.validation';
 
 const sanitizeUser = (user: {
@@ -29,20 +28,18 @@ const sanitizeUser = (user: {
 });
 
 const register = catchAsync(async (req: Request, res: Response) => {
-  const parsed = registerSchema.parse(req);
-  const result = await AuthService.registerUser(parsed.body);
+  const result = await AuthService.registerUser(req.body as RegisterInput);
   sendSuccess(res, result, 'Account registered successfully', 201);
 });
 
 const login = catchAsync(async (req: Request, res: Response) => {
-  const parsed = loginSchema.parse(req);
-  const result = await AuthService.loginUser(parsed.body);
+  const result = await AuthService.loginUser(req.body as LoginInput);
   sendSuccess(res, result, 'Login successful');
 });
 
 const socialLogin = catchAsync(async (req: Request, res: Response) => {
-  const parsed = googleLoginSchema.parse(req);
-  const profile = await verifyGoogleToken(parsed.body.credential);
+  const { credential, role } = req.body as GoogleLoginInput;
+  const profile = await verifyGoogleToken(credential);
 
   let user = await prisma.user.findFirst({
     where: { OR: [{ googleId: profile.googleId }, { email: profile.email }] },
@@ -58,7 +55,7 @@ const socialLogin = catchAsync(async (req: Request, res: Response) => {
         name: profile.name,
         email: profile.email,
         googleId: profile.googleId,
-        role: parsed.body.role,
+        role,
       },
     });
     await audit({
@@ -85,14 +82,14 @@ const socialLogin = catchAsync(async (req: Request, res: Response) => {
 });
 
 const refreshToken = catchAsync(async (req: Request, res: Response) => {
-  const parsed = refreshTokenSchema.parse(req);
-  const result = await AuthService.rotateRefreshToken(parsed.body.refreshToken);
+  const { refreshToken: token } = req.body as { refreshToken: string };
+  const result = await AuthService.rotateRefreshToken(token);
   sendSuccess(res, result, 'Token refreshed successfully');
 });
 
 const logout = catchAsync(async (req: Request, res: Response) => {
-  const parsed = refreshTokenSchema.parse(req);
-  await AuthService.revokeRefreshToken(parsed.body.refreshToken);
+  const { refreshToken: token } = req.body as { refreshToken: string };
+  await AuthService.revokeRefreshToken(token);
   sendSuccess(res, {}, 'Logged out successfully');
 });
 
@@ -108,12 +105,8 @@ const getMe = catchAsync(async (req: Request, res: Response) => {
 });
 
 const changePassword = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
-  const parsed = changePasswordSchema.parse(req);
-  const result = await AuthService.changePassword(
-    req.user!.id,
-    parsed.body.currentPassword,
-    parsed.body.newPassword
-  );
+  const { currentPassword, newPassword } = req.body as ChangePasswordInput;
+  const result = await AuthService.changePassword(req.user!.id, currentPassword, newPassword);
   sendSuccess(res, result, 'Password changed successfully. Please login again.');
 });
 

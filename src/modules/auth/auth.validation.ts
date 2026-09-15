@@ -45,3 +45,9 @@ export const googleLoginSchema = z.object({
     role: z.enum(['CANDIDATE', 'RECRUITER']).default('CANDIDATE'),
   }),
 });
+
+export type RegisterInput = z.infer<typeof registerSchema>['body'];
+export type LoginInput = z.infer<typeof loginSchema>['body'];
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];
+export type GoogleLoginInput = z.infer<typeof googleLoginSchema>['body'];
+
