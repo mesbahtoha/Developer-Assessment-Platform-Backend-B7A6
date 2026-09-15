@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { AuthController } from './auth.controller';
 import { validate } from '../../middlewares/validate';
@@ -34,6 +34,8 @@ router.post(
   validate(googleLoginSchema),
   AuthController.socialLogin
 );
+// Assignment-spec alias: POST /api/v1/auth/google (same Google ID-token flow)
+router.post('/google', authLimiter, validate(googleLoginSchema), AuthController.socialLogin);
 router.post('/refresh-token', validate(refreshTokenSchema), AuthController.refreshToken);
 router.post('/logout', validate(refreshTokenSchema), AuthController.logout);
 router.get('/me', verifyAuth, AuthController.getMe);

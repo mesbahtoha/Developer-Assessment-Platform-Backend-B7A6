@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+﻿import express, { Application } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -6,6 +6,8 @@ import { env, isProd } from './config/env';
 import globalErrorHandler from './middlewares/globalErrorHandler';
 import { notFound } from './middlewares/notFound';
 import { authRoutes } from './modules/auth/auth.routes';
+import { userRoutes } from './modules/user/user.routes';
+import { adminRoutes } from './modules/admin/admin.routes';
 
 const app: Application = express();
 
@@ -43,12 +45,12 @@ app.get('/', (_req, res) => {
   });
 });
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/admin', adminRoutes);
 // Future modules mount here:
-// app.use('/api/v1/users', userRoutes);
 // app.use('/api/v1/assessments', assessmentRoutes);
 // app.use('/api/v1/attempts', attemptRoutes);
 // app.use('/api/v1/payments', paymentRoutes);
-// app.use('/api/v1/admin', adminRoutes);
 
 // 404 + error handling (order matters)
 app.use(notFound);

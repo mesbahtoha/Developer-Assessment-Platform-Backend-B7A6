@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express';
+﻿import { NextFunction, Request, Response } from 'express';
 import { AnyZodObject } from 'zod';
 import { ApiError } from '../shared/catchAsync';
 
@@ -25,8 +25,11 @@ export const validate =
     }
 
     const data = parsed.data as Record<string, unknown>;
+    // Write parsed (coerced/transformed) values back so controllers get typed data
     if (sources.includes('body')) req.body = data.body;
+    if (sources.includes('query')) {
+      (req as unknown as { query: unknown }).query = data.query;
+    }
     if (sources.includes('params')) req.params = data.params as typeof req.params;
     next();
   };
-

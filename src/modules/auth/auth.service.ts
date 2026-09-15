@@ -1,10 +1,10 @@
-import jwt, { SignOptions } from 'jsonwebtoken';
+﻿import jwt, { SignOptions } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { env } from '../../config/env';
 import { ApiError } from '../../shared/catchAsync';
 import prisma from '../../shared/prisma';
 import { audit } from '../../shared/audit';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -13,14 +13,14 @@ const signAccessToken = (payload: { id: string; email: string; role: Role }): st
   const options: SignOptions = {
     expiresIn: env.JWT_ACCESS_EXPIRES_IN as unknown as SignOptions['expiresIn'],
   };
-  return jwt.sign(payload, env.JWT_ACCESS_SECRET, options);
+  return jwt.sign({ ...payload, jti: randomUUID() }, env.JWT_ACCESS_SECRET, options);
 };
 
 const signRefreshToken = (payload: { id: string }): string => {
   const options: SignOptions = {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as unknown as SignOptions['expiresIn'],
   };
-  return jwt.sign(payload, env.JWT_REFRESH_SECRET, options);
+  return jwt.sign({ ...payload, jti: randomUUID() }, env.JWT_REFRESH_SECRET, options);
 };
 
 const getRefreshExpiry = (): Date => {
