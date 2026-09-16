@@ -1,4 +1,4 @@
-export class ApiError extends Error {
+﻿export class ApiError extends Error {
   public readonly statusCode: number;
   public readonly errors: unknown[];
 
@@ -14,6 +14,9 @@ export class ApiError extends Error {
   }
   static unauthorized(message = 'You are not authorized', errors: unknown[] = []) {
     return new ApiError(401, message, errors);
+  }
+  static paymentRequired(message = 'Payment required') {
+    return new ApiError(402, message);
   }
   static forbidden(message = 'Forbidden', errors: unknown[] = []) {
     return new ApiError(403, message, errors);
