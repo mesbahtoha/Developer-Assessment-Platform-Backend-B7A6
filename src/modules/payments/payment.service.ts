@@ -32,9 +32,9 @@ export const createCheckoutSession = async (
     where: { id: assessmentId, isDeleted: false },
   });
   if (!assessment) throw ApiError.notFound('Assessment not found');
-  if (user.role !== 'ADMIN' && assessment.recruiterId !== user.id) {
-    throw ApiError.notFound('Assessment not found');
-  }
+  // Candidates pay for their own attempt; recruiters/admins pay on behalf of the assessment.
+  // Ownership is still enforced for reads; creation is intentionally open to all roles
+  // so the attempt gate (userId + assessmentId + PAID) can succeed for candidates.
   if (!Number.isInteger(amountCents) || amountCents < 50) {
     throw ApiError.badRequest('amountInCents must be an integer >= 50');
   }
