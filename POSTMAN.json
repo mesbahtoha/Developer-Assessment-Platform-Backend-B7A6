@@ -40,10 +40,51 @@
       "value": "",
       "type": "string",
       "description": "JWT access token for candidate user"
+    },
+    {
+      "key": "assessmentId",
+      "value": "",
+      "type": "string",
+      "description": "Assessment UUID for payment/attempt flows"
+    },
+    {
+      "key": "problemId",
+      "value": "",
+      "type": "string",
+      "description": "Problem UUID"
+    },
+    {
+      "key": "invitationId",
+      "value": "",
+      "type": "string",
+      "description": "Invitation UUID"
+    },
+    {
+      "key": "attemptId",
+      "value": "",
+      "type": "string",
+      "description": "Attempt UUID"
+    },
+    {
+      "key": "submissionId",
+      "value": "",
+      "type": "string",
+      "description": "Submission UUID"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string",
+      "description": "Payment UUID"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string",
+      "description": "Stripe checkout session id (cs_test_...)"
     }
   ],
   "item": [
-    /* ==================== AUTHENTICATION ==================== */
     {
       "name": "Authentication",
       "item": [
@@ -231,8 +272,6 @@
         }
       ]
     },
-
-    /* ==================== USERS ==================== */
     {
       "name": "Users",
       "item": [
@@ -387,7 +426,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"true\"\n}"
+              "raw": "{\n  \"isActive\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/admin/users/:id/status",
@@ -400,7 +439,8 @@
                 ":id",
                 "status"
               ]
-            }
+            },
+            "description": "ADMIN only. Body must be { \"isActive\": boolean }. Deactivates via soft-delete flags."
           }
         },
         {
@@ -432,7 +472,8 @@
                 ":id",
                 "role"
               ]
-            }
+            },
+            "description": "ADMIN only. Body must be { \"role\": \"CANDIDATE\" | \"RECRUITER\" | \"ADMIN\" }. Cannot change own role."
           }
         },
         {
@@ -456,11 +497,82 @@
               ]
             }
           }
+        },
+        {
+          "name": "Admin: List Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: List Assessments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/assessments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "assessments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: List Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "action",
+                "value": "PAYMENT_INITIATED",
+                "description": "Filter by action"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs?action=PAYMENT_INITIATED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "audit-logs"
+              ]
+            }
+          }
         }
       ]
     },
-
-    /* ==================== PROBLEMS ==================== */
     {
       "name": "Problems",
       "item": [
@@ -660,8 +772,6 @@
         }
       ]
     },
-
-    /* ==================== ASSESSMENTS ==================== */
     {
       "name": "Assessments",
       "item": [
@@ -883,8 +993,6 @@
         }
       ]
     },
-
-    /* ==================== INVITATIONS ==================== */
     {
       "name": "Invitations",
       "item": [
@@ -1010,8 +1118,6 @@
         }
       ]
     },
-
-    /* ==================== ATTEMPTS ==================== */
     {
       "name": "Attempts",
       "item": [
@@ -1173,8 +1279,6 @@
         }
       ]
     },
-
-    /* ==================== SUBMISSIONS ==================== */
     {
       "name": "Submissions",
       "item": [
@@ -1202,8 +1306,6 @@
         }
       ]
     },
-
-    /* ==================== EVALUATION ==================== */
     {
       "name": "Evaluation",
       "item": [
@@ -1399,8 +1501,6 @@
         }
       ]
     },
-
-    /* ==================== PAYMENTS ==================== */
     {
       "name": "Payments",
       "item": [
@@ -1415,7 +1515,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{recruiterToken}}"
+                "value": "Bearer {{candidateToken}}"
               }
             ],
             "body": {
@@ -1431,7 +1531,8 @@
                 "payments",
                 "create"
               ]
-            }
+            },
+            "description": "Any authenticated role (typically CANDIDATE paying for own attempt). Zod: assessmentId UUID, amountInCents int >= 50. Returns { url, sessionId, payment }. Pay at `url` with test card 4242 4242 4242 4242."
           }
         },
         {
@@ -1458,7 +1559,32 @@
                 "payments",
                 "webhook"
               ]
-            }
+            },
+            "description": "PUBLIC (no Bearer token). Stripe signs the raw body; server verifies signature via STRIPE_WEBHOOK_SECRET. Test with: stripe listen --forward-to localhost:5000/api/v1/payments/webhook. Marks payment PAID/FAILED idempotently."
+          }
+        },
+        {
+          "name": "Verify Checkout Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments/verify/:sessionId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "verify",
+                ":sessionId"
+              ]
+            },
+            "description": "Server-side Stripe retrieve + reconcile. Marks PAID if Stripe says paid. Use after returning from Checkout success_url."
           }
         },
         {
@@ -1468,7 +1594,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{recruiterToken}}"
+                "value": "Bearer {{candidateToken}}"
               }
             ],
             "url": {
@@ -1480,7 +1606,8 @@
                 "payments",
                 ":id"
               ]
-            }
+            },
+            "description": "Owner or ADMIN only (403 otherwise)."
           }
         },
         {
@@ -1490,7 +1617,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{recruiterToken}}"
+                "value": "Bearer {{candidateToken}}"
               }
             ],
             "query": [
@@ -1514,13 +1641,12 @@
                 "payments",
                 "my-payments"
               ]
-            }
+            },
+            "description": "Lists current user payments with assessment titles."
           }
         }
       ]
     },
-
-    /* ==================== ERROR RESPONSES ==================== */
     {
       "name": "Error Responses",
       "item": [
