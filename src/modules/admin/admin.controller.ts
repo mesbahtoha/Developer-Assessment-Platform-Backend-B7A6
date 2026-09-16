@@ -4,10 +4,9 @@ import { sendSuccess } from '../../shared/ApiResponse';
 import { AdminService } from './admin.service';
 import {
   ListUsersQuery,
-  UpdateUserStatusInput,
-  UpdateUserRoleInput,
   SearchUsersQuery,
 } from './admin.validation';
+import { AuthUser } from '../../middlewares/auth';
 
 const listUsers = catchAsync(async (req: Request, res: Response) => {
   const result = await AdminService.listUsers(req.query as unknown as ListUsersQuery);
@@ -20,36 +19,41 @@ const searchUsers = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
-  const { status } = req.body as UpdateUserStatusInput;
-  await AdminService.updateUserStatus(status.status);
-  sendSuccess(res, { status: status.status }, 'User status updated successfully');
+  const body = req.body as { isActive: boolean };
+  const result = await AdminService.updateUserStatus(req.params.id, body.isActive);
+  sendSuccess(res, result, 'User status updated successfully');
 });
 
 const updateUserRole = catchAsync(async (req: Request, res: Response) => {
-  const { role } = req.body as UpdateUserRoleInput;
-  const userId = req.params.id;
-  await AdminService.updateUserRole(userId, role.role);
-  sendSuccess(res, { role: role.role }, 'User role updated successfully');
+  const body = req.body as { role: 'CANDIDATE' | 'RECRUITER' | 'ADMIN' };
+  const actor = (req as unknown as { user: AuthUser }).user;
+  const result = await AdminService.updateUserRole(req.params.id, body.role, actor);
+  sendSuccess(res, result, 'User role updated successfully');
 });
 
-const dashboardStats = catchAsync(async (req: Request, res: Response) => {
+const dashboardStats = catchAsync(async (_req: Request, res: Response) => {
   const result = await AdminService.dashboardStats();
   sendSuccess(res, result, 'Dashboard statistics fetched successfully');
 });
 
 const listPayments = catchAsync(async (req: Request, res: Response) => {
-  const user = (req as any).user;
-  const result = await AdminService.listPayments(user as AuthUser, req.query as any);
+  const user = (req as unknown as { user: AuthUser }).user;
+  const result = await AdminService.listPayments(
+    user,
+    req.query as unknown as { page?: number; limit?: number }
+  );
   sendSuccess(res, result, 'Payments fetched successfully');
 });
 
-const listAssessments = catchAsync(async (req: Request, res: Response) => {
+const listAssessments = catchAsync(async (_req: Request, res: Response) => {
   const result = await AdminService.listAssessments();
   sendSuccess(res, result, 'Assessments fetched successfully');
 });
 
 const listAuditLogs = catchAsync(async (req: Request, res: Response) => {
-  const result = await AdminService.listAuditLogs(req.query as any);
+  const result = await AdminService.listAuditLogs(
+    req.query as unknown as { page?: number; limit?: number; action?: string }
+  );
   sendSuccess(res, result, 'Audit logs fetched successfully');
 });
 

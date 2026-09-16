@@ -1,13 +1,17 @@
 {
-  "frameworkExpress": true,
-  "functions": {
-    "dist/server.js": {
-      "memory": 1024,
-      "timeout": 30
+  "version": 2,
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "builds": [
+    {
+      "src": "dist/server.js",
+      "use": "@vercel/node"
     }
-  },
-  "env": {
-    "NODE_ENV": "production",
-    "PORT": "5000"
-  }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/server.js"
+    }
+  ]
 }

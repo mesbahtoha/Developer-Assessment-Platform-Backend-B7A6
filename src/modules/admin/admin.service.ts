@@ -2,12 +2,9 @@
 import prisma from '../../shared/prisma';
 import { publicUserSelect } from '../user/user.service';
 import { AuthUser } from '../../middlewares/auth';
-import {
-  ListUsersQuery,
-  UpdateUserStatusInput,
-  UpdateUserRoleInput,
-  SearchUsersQuery,
-} from './admin.validation';
+import { ApiError } from '../../shared/catchAsync';
+import { audit } from '../../shared/audit';
+import { ListUsersQuery, SearchUsersQuery } from './admin.validation';
 
 const buildWhere = (query: ListUsersQuery): Prisma.UserWhereInput => {
   const where: Prisma.UserWhereInput = {};
@@ -80,30 +77,47 @@ const searchUsers = async (query: SearchUsersQuery) => {
   };
 };
 
-const updateUserStatus = async (status: boolean) => {
-  const mappedStatus = status ? 'PUBLISHED' : 'ARCHIVED';
-  await prisma.user.updateMany({
-    where: { isDeleted: false },
-    data: { isDeleted: !status, deletedAt: status ? null : new Date() },
+const updateUserStatus = async (userId: string, isActive: boolean) => {
+  const user = await prisma.user.findFirst({ where: { id: userId } });
+  if (!user) throw ApiError.notFound('User not found');
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isDeleted: !isActive, deletedAt: isActive ? null : new Date() },
+    select: publicUserSelect,
   });
-  return { modifiedCount: 0 };
+  await audit({
+    action: 'USER_STATUS_UPDATED',
+    targetType: 'USER',
+    targetId: userId,
+    meta: { isActive },
+  });
+  return { user: updated };
 };
 
-const updateUserRole = async (userId: string, newRole: 'CANDIDATE' | 'RECRUITER' | 'ADMIN') => {
+const updateUserRole = async (
+  userId: string,
+  newRole: 'CANDIDATE' | 'RECRUITER' | 'ADMIN',
+  actor: AuthUser
+) => {
   const user = await prisma.user.findFirst({
     where: { id: userId, isDeleted: false },
   });
-  if (!user) throw new Error('User not found');
+  if (!user) throw ApiError.notFound('User not found');
+  if (user.id === actor.id) throw ApiError.forbidden('You cannot change your own role');
 
-  // Prevent promoting non-admin to admin via this endpoint
-  if (newRole === 'ADMIN' && user.role !== 'ADMIN') {
-    throw new Error('Cannot promote user to admin via this endpoint');
-  }
-
-  return prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id: userId },
     data: { role: newRole },
+    select: publicUserSelect,
   });
+  await audit({
+    actorId: actor.id,
+    action: 'USER_ROLE_UPDATED',
+    targetType: 'USER',
+    targetId: userId,
+    meta: { from: user.role, to: newRole },
+  });
+  return { user: updated };
 };
 
 const dashboardStats = async () => {

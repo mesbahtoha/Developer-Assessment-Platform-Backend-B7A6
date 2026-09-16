@@ -8,6 +8,7 @@ import {
   updateUserStatusSchema,
   updateUserRoleSchema,
   searchUsersQuerySchema,
+  listAuditLogsQuerySchema,
 } from './admin.validation';
 
 const router = Router();
@@ -22,7 +23,7 @@ router.get(
   AdminController.listUsers
 );
 
-// ---------- User search ----------
+// ---------- User search (must be BEFORE '/users/:id/...' style routes) ----------
 router.get(
   '/users/search',
   validate(searchUsersQuerySchema, ['query']),
@@ -32,14 +33,14 @@ router.get(
 // ---------- User status update ----------
 router.patch(
   '/users/:id/status',
-  validate(updateUserStatusSchema),
+  validate(updateUserStatusSchema, ['params', 'body']),
   AdminController.updateUserStatus
 );
 
 // ---------- User role update ----------
 router.patch(
   '/users/:id/role',
-  validate(updateUserRoleSchema),
+  validate(updateUserRoleSchema, ['params', 'body']),
   AdminController.updateUserRole
 );
 
@@ -53,6 +54,10 @@ router.get('/payments', AdminController.listPayments);
 router.get('/assessments', AdminController.listAssessments);
 
 // ---------- Audit logs ----------
-router.get('/audit-logs', AdminController.listAuditLogs);
+router.get(
+  '/audit-logs',
+  validate(listAuditLogsQuerySchema, ['query']),
+  AdminController.listAuditLogs
+);
 
 export const adminRoutes = router;
