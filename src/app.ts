@@ -10,6 +10,9 @@ import { userRoutes } from './modules/user/user.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { problemRoutes } from './modules/problem/problem.routes';
 import { assessmentRoutes } from './modules/assessment/assessment.routes';
+import { invitationRoutes } from './modules/invitation/invitation.routes';
+import { attemptRoutes } from './modules/attempt/attempt.routes';
+import { submissionRoutes } from './modules/attempt/submission.routes';
 
 const app: Application = express();
 
@@ -51,6 +54,9 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/problems', problemRoutes);
 app.use('/api/v1/assessments', assessmentRoutes);
+app.use('/api/v1/invitations', invitationRoutes);
+app.use('/api/v1/attempts', attemptRoutes);
+app.use('/api/v1/submissions', submissionRoutes);
 // Future modules mount here:
 // app.use('/api/v1/attempts', attemptRoutes);
 // app.use('/api/v1/payments', paymentRoutes);

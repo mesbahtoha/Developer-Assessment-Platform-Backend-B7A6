@@ -1,4 +1,5 @@
 ﻿import { Router } from 'express';
+import { AttemptController } from '../attempt/attempt.controller';
 import { verifyAuth } from '../../middlewares/auth';
 import { authorize } from '../../middlewares/rbac';
 import { validate } from '../../middlewares/validate';
@@ -19,6 +20,8 @@ router.use(verifyAuth);
 router.post('/', authorize('RECRUITER', 'ADMIN'), validate(createAssessmentSchema), AssessmentController.create);
 router.get('/', validate(listAssessmentsQuerySchema, ['query']), AssessmentController.list);
 router.get('/:id', AssessmentController.getById);
+// Candidate workflow: start an attempt (invitation + payment + duplicate guards inside)
+router.post('/:assessmentId/start', authorize('CANDIDATE'), AttemptController.start);
 
 // Recruiter/admin-only mutations
 router.patch(
