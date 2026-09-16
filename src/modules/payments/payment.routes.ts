@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyAuth } from '../../middlewares/auth';
-import { requireRecruiter } from '../../middlewares/rbac';
+import { requireRecruiterOrAdmin } from '../../middlewares/rbac';
 import { validate } from '../../middlewares/validate';
 import { PaymentController } from './payment.controller';
 import { createCheckoutSchema } from './payment.validation';
@@ -13,13 +13,13 @@ router.post('/webhook', PaymentController.webhook);
 
 router.use(verifyAuth);
 
-router.post('/create', requireRecruiter, validate(createCheckoutSchema), PaymentController.create);
+router.post('/create', requireRecruiterOrAdmin, validate(createCheckoutSchema), PaymentController.create);
 
 // IMPORTANT: static routes before ':id' so Express does not treat them as ids.
-router.get('/my-payments', requireRecruiter, PaymentController.myPayments);
+router.get('/my-payments', requireRecruiterOrAdmin, PaymentController.myPayments);
 
-router.get('/verify/:sessionId', requireRecruiter, PaymentController.verify);
+router.get('/verify/:sessionId', requireRecruiterOrAdmin, PaymentController.verify);
 
-router.get('/:id', requireRecruiter, PaymentController.getById);
+router.get('/:id', requireRecruiterOrAdmin, PaymentController.getById);
 
 export const paymentRoutes = router;
