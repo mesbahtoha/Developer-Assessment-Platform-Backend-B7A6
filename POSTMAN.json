@@ -1,0 +1,1600 @@
+{
+  "info": {
+    "name": "Developer Assessment Platform API",
+    "schema": "https://schema.getpostman.com/schema/collection/v2.1.0",
+    "description": "Backend API for Developer Assessment Platform - Full Stack Coding & Evaluation Platform"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string",
+      "description": "Base URL for all API endpoints"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token for candidate/authenticated users"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT refresh token for token rotation"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token for admin user"
+    },
+    {
+      "key": "recruiterToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token for recruiter user"
+    },
+    {
+      "key": "candidateToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token for candidate user"
+    }
+  ],
+  "item": [
+    /* ==================== AUTHENTICATION ==================== */
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"StrongPass123\",\n  \"role\": \"CANDIDATE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"StrongPass123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Google Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"credential\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"role\": \"CANDIDATE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/google",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh-token"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Me (Profile)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"OldPass123\",\n  \"newPassword\": \"NewPass123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== USERS ==================== */
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"avatarUrl\": \"https://example.com/avatar.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "page",
+                "value": "1",
+                "description": "Page number"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Items per page"
+              },
+              {
+                "key": "role",
+                "description": "Filter by role (CANDIDATE/RECRUITER/ADMIN)",
+                "value": ""
+              },
+              {
+                "key": "isDeleted",
+                "description": "Filter by deletion status (true/false)",
+                "value": ""
+              },
+              {
+                "key": "search",
+                "description": "Search by name or email"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Search Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "q",
+                "description": "Search query (name/email)",
+                "value": "john"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Max results to return"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "search"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Update User Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"true\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                ":id",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Update User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"RECRUITER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:id/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                ":id",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard-stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "dashboard-stats"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== PROBLEMS ==================== */
+    {
+      "name": "Problems",
+      "item": [
+        {
+          "name": "Create Problem (MCQ)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"problem\": {\n    \"title\": \"What does HTTP 409 mean?\",\n    \"type\": \"MCQ\",\n    \"difficulty\": \"EASY\",\n    \"prompt\": \"What does HTTP status code 409 indicate?\",\n    \"options\": [\"Conflict\", \"OK\", \"Not Found\", \"Unauthorized\"],\n    \"correctAnswer\": \"Conflict\",\n    \"points\": 2,\n    \"tags\": [\"http\", \"status\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/problems",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "problems"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Problems",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "query": [
+              {
+                "key": "page",
+                "value": "1",
+                "description": "Page number"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Items per page"
+              },
+              {
+                "key": "type",
+                "description": "Filter by MCQ/CODE",
+                "value": ""
+              },
+              {
+                "key": "difficulty",
+                "description": "Filter by EASY/MEDIUM/HARD",
+                "value": ""
+              },
+              {
+                "key": "search",
+                "description": "Search by title or prompt"
+              },
+              {
+                "key": "sortBy",
+                "value": "createdAt",
+                "description": "Sort field"
+              },
+              {
+                "key": "sortOrder",
+                "value": "desc",
+                "description": "Sort order"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/problems",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "problems"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Problems",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "query": [
+              {
+                "key": "q",
+                "description": "Search term",
+                "value": "HTTP"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Max results"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/problems/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "problems",
+                "search"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Problem by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/problems/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "problems",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Problem",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"problem\": {\n    \"title\": \"Updated Problem Title\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/problems/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "problems",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Problem (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/problems/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "problems",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== ASSESSMENTS ==================== */
+    {
+      "name": "Assessments",
+      "item": [
+        {
+          "name": "Create Assessment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Java Spring Boot Test\",\n  \"description\": \"A comprehensive test for Spring Boot framework\",\n  \"durationMin\": 60,\n  \"price\": 0,\n  \"passScorePercent\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/assessments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Assessments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "page",
+                "value": "1",
+                "description": "Page number"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Items per page"
+              },
+              {
+                "key": "status",
+                "description": "Filter by DRAFT/PUBLISHED/CLOSED/ARCHIVED"
+              },
+              {
+                "key": "search",
+                "description": "Search by title or description"
+              },
+              {
+                "key": "sortBy",
+                "value": "createdAt",
+                "description": "Sort field"
+              },
+              {
+                "key": "sortOrder",
+                "value": "desc",
+                "description": "Sort order"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assessments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Assessment by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assessments/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Candidate: Start Attempt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/assessments/:assessmentId/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments",
+                ":assessmentId",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Update Assessment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Assessment Title\",\n  \"status\": \"PUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/assessments/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Delete Assessment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assessments/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Attach Problems to Assessment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"problemIds\": [\"{{problemId1}}\", \"{{problemId2}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/assessments/:id/problems",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments",
+                ":id",
+                "problems"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== INVITATIONS ==================== */
+    {
+      "name": "Invitations",
+      "item": [
+        {
+          "name": "Send Invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\",\n  \"candidateEmail\": \"candidate@example.com\",\n  \"expiresAt\": \"2024-12-31T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Invitations (Candidate)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "status",
+                "description": "Filter by PENDING/ACCEPTED/EXPIRED/CANCELLED"
+              },
+              {
+                "key": "sortBy",
+                "value": "createdAt",
+                "description": "Sort field"
+              },
+              {
+                "key": "sortOrder",
+                "value": "desc",
+                "description": "Sort order"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/:id/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations",
+                ":id",
+                "accept"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Invitation",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/:id/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations",
+                ":id",
+                "reject"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== ATTEMPTS ==================== */
+    {
+      "name": "Attempts",
+      "item": [
+        {
+          "name": "Start Attempt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attempts/:assessmentId/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attempts",
+                ":assessmentId",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Attempt by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attempts/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attempts",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Attempt",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attempts/:id/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attempts",
+                ":id",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Submissions for Attempt",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attempts/:attemptId/submissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attempts",
+                ":attemptId",
+                "submissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Submission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"problemId\": \"{{problemId}}\",\n  \"answer\": \"Conflict\",\n  \"language\": \"javascript\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attempts/:attemptId/submissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attempts",
+                ":attemptId",
+                "submissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Submission by ID (Recruiter)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/submissions/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "submissions",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== SUBMISSIONS ==================== */
+    {
+      "name": "Submissions",
+      "item": [
+        {
+          "name": "Get Submission Detail (Candidate)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/submissions/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "submissions",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== EVALUATION ==================== */
+    {
+      "name": "Evaluation",
+      "item": [
+        {
+          "name": "Candidate: View My Results",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "page",
+                "value": "1",
+                "description": "Page number"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Items per page"
+              },
+              {
+                "key": "sortBy",
+                "value": "createdAt",
+                "description": "Sort field"
+              },
+              {
+                "key": "sortOrder",
+                "value": "desc",
+                "description": "Sort order"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation/results/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation",
+                "results",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recruiter: List Pending Evaluations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "page",
+                "value": "1",
+                "description": "Page number"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Items per page"
+              },
+              {
+                "key": "assessmentId",
+                "description": "Filter by assessment ID"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation/submissions/pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation",
+                "submissions",
+                "pending"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Evaluator: Evaluate Submission",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 2,\n  \"feedback\": \"Correct answer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation/submissions/:id/evaluate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation",
+                "submissions",
+                ":id",
+                "evaluate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recruiter: Assessment Results",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "isPassed",
+                "description": "Filter by pass/fail"
+              },
+              {
+                "key": "page",
+                "value": "1",
+                "description": "Page number"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Items per page"
+              },
+              {
+                "key": "sortBy",
+                "value": "createdAt",
+                "description": "Sort field"
+              },
+              {
+                "key": "sortOrder",
+                "value": "desc",
+                "description": "Sort order"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation/assessments/:id/results",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation",
+                "assessments",
+                ":id",
+                "results"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recruiter: Assessment Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation/assessments/:id/report",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation",
+                "assessments",
+                ":id",
+                "report"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== PAYMENTS ==================== */
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\",\n  \"amountInCents\": 999\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Stripe Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_123456789\",\n  \"object\": \"event\",\n  \"api_version\": \"2024-09-30\",\n  \"created\": 1234567890,\n  \"data\": {\n    \"object\": {\n      \"id\": \"session_123456789\",\n      \"object\": \"checkout.session\",\n      \"billing_address_collection\": \"auto\",\n      \"client_reference_id\": \"assessment_1\",\n      \"currency\": \"usd\",\n      \"currency_options\": [],\n      \"expires_at\": null,\n      \"metadata\": {\n        \"userId\": \"user_123\",\n        \"assessmentId\": \"assessment_1\"\n      },\n      \"mode\": \"payment\",\n      \"payment_intent\": \"pi_123456789\",\n      \"payment_method_types\": [\n        \"card\"\n      ],\n      \"status\": \"complete\",\n      \"subscription\": null,\n      \"success_url\": \"http://localhost:3000/payment/success?session_id={CHECKOUT_SESSION_ID}\",\n      \"cancel_url\": \"http://localhost:3000/payment/cancelled\",\n      \"customer\": null,\n      \"livemode\": false,\n      \"payment_request\": null,\n      \"billing_details\": null,\n      \"shipping_details\": null,\n      \"billing_address\": null,\n      \"shipping_address\": null\n    }\n  },\n  \"type\": \"checkout.session.completed\",\n  \"timestamp\": 1234567890\n}",
+              "skip": []
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "webhook"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "page",
+                "value": "1",
+                "description": "Page number"
+              },
+              {
+                "key": "limit",
+                "value": "10",
+                "description": "Items per page"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments/my-payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "my-payments"
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    /* ==================== ERROR RESPONSES ==================== */
+    {
+      "name": "Error Responses",
+      "item": [
+        {
+          "name": "401 Unauthorized",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired access token\",\n  \"errors\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "403 Forbidden",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "404 Not Found",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assessments/invalid-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments",
+                "invalid-id"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

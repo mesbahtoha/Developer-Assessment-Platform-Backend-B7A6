@@ -13,6 +13,8 @@ import { assessmentRoutes } from './modules/assessment/assessment.routes';
 import { invitationRoutes } from './modules/invitation/invitation.routes';
 import { attemptRoutes } from './modules/attempt/attempt.routes';
 import { submissionRoutes } from './modules/attempt/submission.routes';
+import { evaluationRoutes } from './modules/evaluation/evaluation.routes';
+import { paymentRoutes } from './modules/payments/payment.routes';
 
 const app: Application = express();
 
@@ -49,6 +51,16 @@ app.get('/', (_req, res) => {
     data: { docs: '/api/v1' },
   });
 });
+
+app.get('/api/v1/health', (_req, res) => {
+  res.json({
+    success: true,
+    message: 'API is healthy',
+    data: {
+      status: 'ok',
+    },
+  });
+});
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/admin', adminRoutes);
@@ -57,6 +69,8 @@ app.use('/api/v1/assessments', assessmentRoutes);
 app.use('/api/v1/invitations', invitationRoutes);
 app.use('/api/v1/attempts', attemptRoutes);
 app.use('/api/v1/submissions', submissionRoutes);
+app.use('/api/v1/evaluation', evaluationRoutes);
+app.use('/api/v1/payments', paymentRoutes);
 // Future modules mount here:
 // app.use('/api/v1/attempts', attemptRoutes);
 // app.use('/api/v1/payments', paymentRoutes);

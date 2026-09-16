@@ -22,3 +22,4 @@ export const authorize =
 export const requireCandidate = authorize('CANDIDATE');
 export const requireRecruiter = authorize('RECRUITER');
 export const requireAdmin = authorize('ADMIN');
+export const requireRecruiterOrAdmin = authorize('RECRUITER', 'ADMIN');

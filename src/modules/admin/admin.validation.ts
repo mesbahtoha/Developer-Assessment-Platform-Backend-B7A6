@@ -17,4 +17,26 @@ export const listUsersQuerySchema = z.object({
   }),
 });
 
+export const updateUserStatusSchema = z.object({
+  body: z.object({
+    status: z.enum(['true', 'false']).transform((v) => v === 'true'),
+  }),
+});
+
+export const updateUserRoleSchema = z.object({
+  body: z.object({
+    role: z.enum(['CANDIDATE', 'RECRUITER', 'ADMIN']),
+  }),
+});
+
+export const searchUsersQuerySchema = z.object({
+  query: z.object({
+    q: z.string().trim().min(1).max(100),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+  }),
+});
+
 export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>['query'];
+export type UpdateUserStatusInput = z.infer<typeof updateUserStatusSchema>['body'];
+export type UpdateUserRoleInput = z.infer<typeof updateUserRoleSchema>['body'];
+export type SearchUsersQuery = z.infer<typeof searchUsersQuerySchema>['query'];

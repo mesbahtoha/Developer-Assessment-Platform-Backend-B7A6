@@ -1,0 +1,13 @@
+{
+  "frameworkExpress": true,
+  "functions": {
+    "dist/server.js": {
+      "memory": 1024,
+      "timeout": 30
+    }
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "PORT": "5000"
+  }
+}
