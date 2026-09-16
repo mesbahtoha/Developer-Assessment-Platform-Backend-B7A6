@@ -1,91 +1,25 @@
-import { Router, Request, Response } from 'express';
-import Stripe from 'stripe';
-import { ApiError } from '../../shared/catchAsync';
-import prisma from '../../shared/prisma';
-import { AuthUser } from '../../middlewares/auth';
-import { requireRecruiter, requireAdmin } from '../../middlewares/rbac';
+import { Router } from 'express';
+import { verifyAuth } from '../../middlewares/auth';
+import { requireRecruiter } from '../../middlewares/rbac';
 import { validate } from '../../middlewares/validate';
-import { createSubmissionSchema } from '../attempt/attempt.validation';
-import { sendSuccess } from '../../shared/ApiResponse';
-import {
-  createCheckoutSession,
-  retrievePaymentIntent,
-  handleWebhookEvent,
-  getPaymentById,
-  getMyPayments,
-} from './payment.service';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-09-30',
-});
+import { PaymentController } from './payment.controller';
+import { createCheckoutSchema } from './payment.validation';
 
 const router = Router();
 
-// All payment routes require authentication
+// Stripe webhook MUST be public (Stripe signs it) and MUST be declared
+// BEFORE verifyAuth so no Bearer token is required.
+router.post('/webhook', PaymentController.webhook);
+
 router.use(verifyAuth);
 
-// ---------- Recruiter: create checkout session ----------
-router.post(
-  '/create',
-  requireRecruiter,
-  async (req: Request, res: Response) => {
-    const { assessmentId, amountInCents } = req.body as {
-      assessmentId: string;
-      amountInCents: number;
-    };
-    const user = (req as any).user;
+router.post('/create', requireRecruiter, validate(createCheckoutSchema), PaymentController.create);
 
-    const assessment = await prisma.assessment.findFirst({
-      where: { id: assessmentId, recruiterId: user.id },
-    });
-    if (!assessment) throw ApiError.notFound('Assessment not found');
+// IMPORTANT: static routes before ':id' so Express does not treat them as ids.
+router.get('/my-payments', requireRecruiter, PaymentController.myPayments);
 
-    const result = await createCheckoutSession(user, assessmentId, amountInCents);
-    sendSuccess(res, { session: result.session, payment: result.payment }, 'Checkout session created successfully');
-  }
-);
+router.get('/verify/:sessionId', requireRecruiter, PaymentController.verify);
 
-// ---------- Stripe webhook endpoint ----------
-router.post(
-  '/webhook',
-  async (req: Request, res: Response) => {
-    const sig = req.headers['stripe-signature'] as string;
-    let event: Stripe.Event;
-
-    try {
-      event = stripe.Webhook.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET!
-      );
-    } catch (err: any) {
-      throw ApiError.badRequest(`Webhook signature verification failed: ${err.message}`);
-    }
-
-    const result = await handleWebhookEvent(sig, req.body);
-    sendSuccess(res, result, 'Webhook processed successfully');
-  }
-);
-
-// ---------- Get payment by ID ----------
-router.get(
-  '/:id',
-  requireRecruiter,
-  async (req: Request, res: Response) => {
-    const payment = await getPaymentById(req.params.id);
-    sendSuccess(res, payment);
-  }
-);
-
-// ---------- Get current user's payments ----------
-router.get(
-  '/my-payments',
-  requireRecruiter,
-  async (req: Request, res: Response) => {
-    const user = (req as any).user;
-    const payments = await getMyPayments(user);
-    sendSuccess(res, payments);
-  }
-);
+router.get('/:id', requireRecruiter, PaymentController.getById);
 
 export const paymentRoutes = router;

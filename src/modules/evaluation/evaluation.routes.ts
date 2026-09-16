@@ -1,5 +1,6 @@
 ﻿import { Router } from 'express';
-import { requireCandidate, requireRecruiter, requireAdmin } from '../../middlewares/rbac';
+import { verifyAuth } from '../../middlewares/auth';
+import { requireCandidate, requireRecruiter, requireRecruiterOrAdmin } from '../../middlewares/rbac';
 import { validate } from '../../middlewares/validate';
 import { EvaluationController } from './evaluation.controller';
 import {
@@ -9,6 +10,8 @@ import {
 } from './evaluation.validation';
 
 const router = Router();
+
+router.use(verifyAuth);
 
 // ---------- Candidate: view own results ----------
 router.get(
