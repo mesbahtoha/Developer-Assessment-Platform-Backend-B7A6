@@ -1,8 +1,10 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { AuthController } from './auth.controller';
+import { env } from '../../config/env';
 import { validate } from '../../middlewares/validate';
 import { verifyAuth } from '../../middlewares/auth';
+import { RedisRateLimitStore } from '../../shared/rateLimitStore';
 import {
   changePasswordSchema,
   googleLoginSchema,
@@ -13,12 +15,14 @@ import {
 
 const router = Router();
 
-// Stricter rate limit for credential endpoints
+// Stricter rate limit for credential endpoints (brute-force protection).
+// Redis-backed store keeps the shared quota across serverless instances.
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
+  windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+  max: env.AUTH_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RedisRateLimitStore({ windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS }),
   message: {
     success: false,
     message: 'Too many attempts, please try again later',
