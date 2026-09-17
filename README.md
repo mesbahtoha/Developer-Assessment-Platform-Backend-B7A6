@@ -1350,33 +1350,32 @@ Expected response follows the standard API envelope:
 
 ---
 
-# 📮 Postman Documentation
+## 📮 Postman Documentation
 
-The repository includes:
+The project includes a complete Postman collection and detailed API testing documentation.
 
-```text
-POSTMAN.json
-POSTMAN.md
-```
+### 📖 Human-Readable Postman Guide
 
-### `POSTMAN.json`
+Complete API testing guide, environment setup, demo credentials, authentication flow, Stripe testing, RBAC testing, and recommended testing order:
 
-Contains:
+👉 [**POSTMAN.md — Complete API Documentation & Testing Guide**](https://github.com/mesbahtoha/Developer-Assessment-Platform-Backend-B7A6/blob/main/POSTMAN.md)
 
-* 70 requests
-* 13 folders
-* 15 collection variables
-* Role-specific requests
-* Example request bodies
-* Automated token capture
-* Automated ID capture
-* Error response examples
+### 📦 Postman Collection
 
-### `POSTMAN.md`
+Ready-to-import Postman collection containing the project's API requests:
 
-Provides a human-readable walkthrough of the major API workflows.
+👉 [**POSTMAN.json — Importable Postman Collection**](https://github.com/mesbahtoha/Developer-Assessment-Platform-Backend-B7A6/blob/main/POSTMAN.json)
 
-Import `POSTMAN.json` into **Postman** or **Thunder Client** to begin testing.
+### 🚀 Quick Start with Postman
+
+1. Download or import **POSTMAN.json** into Postman.
+2. Create/select the `DeveloperAssessment` environment.
+3. Configure the required environment variables.
+4. Login using one of the provided demo accounts.
+5. Save the returned JWT tokens.
+6. Follow the recommended API testing workflow.
+7. Use **POSTMAN.md** for detailed endpoint documentation and testing instructions.
+
 
 ---
 
