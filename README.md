@@ -72,10 +72,12 @@ then `POST /assessments/:id/start`.
 
 ## Deploy (Vercel)
 
-Build `npm run build` to `dist/server.js`; `vercel.json` routes `/(.*)`
-to it. Set `DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET,
-CLIENT_URL, GOOGLE_CLIENT_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET`,
-run `prisma migrate deploy`, `npm run seed` once, verify `/api/v1/health`.
+Build `npm run vercel-build` (prisma generate + tsc) to `dist/server.js`;
+`vercel.json` routes `/(.*)` to it. Set `DATABASE_URL, JWT_ACCESS_SECRET,
+JWT_REFRESH_SECRET, CLIENT_URL, GOOGLE_CLIENT_ID, STRIPE_SECRET_KEY,
+STRIPE_WEBHOOK_SECRET, REDIS_URL` (optional but recommended: shared cache +
+shared rate-limit quota across serverless instances), run
+`prisma migrate deploy`, `npm run seed` once, verify `/api/v1/health`.
 
 ## Postman
 
@@ -84,7 +86,15 @@ Import `POSTMAN.json` (valid JSON, 10 folders, 54 requests). Env vars:
 assessmentId, invitationId, attemptId, submissionId, paymentId, sessionId`.
 See `POSTMAN.md` for flows and RBAC matrix.
 
+## QA / Smoke tests
+
+`npm run smoke` runs a 66-check end-to-end suite against a running API
+(response envelope, auth + refresh rotation, RBAC 403s, validation 400s,
+404s, soft delete, pagination/filter/sort/search, assessment lifecycle,
+invitations, attempts, Redis cache behaviour, Stripe payment guards).
+`npm run smoke:clean` removes smoke rows afterwards. `npm run test:rbac`
+runs the RBAC unit checks.
+
 ## Scripts
 
-`npm run dev|build|start|type-check|seed`; `node scripts/rbac-unit.js`;
-`scripts/smoke-*.ps1` suites.
+`npm run dev|build|start|type-check|seed|smoke|smoke:clean|test:rbac`.
