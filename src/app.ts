@@ -64,7 +64,7 @@ app.get('/api/v1', (_req, res) => {
       version: 'v1',
       environment: env.NODE_ENV,
       health: '/api/v1/health',
-      documentation: 'POSTMAN.json / POSTMAN.md (Postman collection, 60+ requests)',
+      documentation: 'POSTMAN.json / POSTMAN.md (Postman collection, 70 requests)',
       modules: {
         auth: '/api/v1/auth',
         users: '/api/v1/users',

@@ -1,164 +1,119 @@
 # Postman Collection Guide
 
-## Overview
-This document describes the Postman collection for the Developer Assessment Platform Backend API.
+Production base URL (`baseUrl`):
 
-## Base URL
 ```
-https://developerassessmentbackend.vercel.app
+https://developerassessmentbackend.vercel.app/api/v1
 ```
 
-## Authentication
-All protected endpoints require a Bearer token. Obtain it from the **Authentication** folder:
+Import `POSTMAN.json` (13 folders, 70 requests, 15 variables).
+Run folders top-to-bottom against production.
 
-1. **Login** - `/api/auth/login` (POST)
-   - Body: `{"email": "...", "password": "..."}`
-   - Returns `accessToken` and `refreshToken`
 
-2. **Google OAuth** - `/api/auth/google` (POST)
-   - Body: `{"idToken": "..."}`
+## Authentication (real routes)
 
-3. **Refresh Token** - `/api/auth/refresh` (POST)
-   - Body: `{"refreshToken": "..."}`
+All protected endpoints use `Authorization: Bearer {{accessToken}}`.
 
-4. **Logout** - `/api/auth/logout` (POST)
-   - Body: `{"refreshToken": "..."}`
+1. **Register** — `POST {{baseUrl}}/auth/register` — `{name, email, password (8+ chars, letter+number), role: CANDIDATE|RECRUITER}` → 201 `{user, accessToken, refreshToken}`; duplicate → 409.
+2. **Login** — `POST {{baseUrl}}/auth/login` — `{email, password}` → 200. Collection has Candidate/Admin/Recruiter variants; test scripts auto-save tokens.
+3. **Google** — `POST {{baseUrl}}/auth/google` (alias `POST {{baseUrl}}/auth/social-login`) — `{credential: <Google ID token>, role?}` → 401 on invalid credential.
+4. **Refresh** — `POST {{baseUrl}}/auth/refresh-token` — `{refreshToken}` → rotates; reuse → 401.
+5. **Logout** — `POST {{baseUrl}}/auth/logout` — `{refreshToken}` → 200.
+6. **Me** — `GET {{baseUrl}}/auth/me` — no/bad token → 401.
+7. **Change password** — `PATCH {{baseUrl}}/auth/change-password` — `{currentPassword, newPassword}` → revokes sessions.
 
 ## Roles & Permissions
 
 | Role | Can Access |
 |------|-----------|
-| **Candidate** | Own profile, assessments, attempts, submissions, results, leaderboard |
-| **Recruiter** | Create assessments, invite candidates, view results, reports |
-| **Admin** | Full access to all user management, audit logs, system settings |
+| **Candidate** | Own profile, PUBLISHED assessments, accept/reject invitations, start/submit attempts (invitation + payment + duplicate guards), own results/payments |
+| **Recruiter** | Company profile, problem bank CRUD, assessment lifecycle + attach/detach, invitations, evaluation queue + manual evaluation, results/report |
+| **Admin** | All recruiter powers + `/admin/*` user management, registers, dashboard stats, audit logs, Stripe refunds |
 
-## Collection Structure
+Wrong role → 403; cross-owner read → 404 (no leak); candidate on `/problems` → 403.
 
-### Authentication
-- Login (email/password)
-- Google OAuth
-- Refresh Token
-- Logout
+## Collection Structure (13 folders, 70 requests — matches live routes)
 
-### User Management (Admin only)
-- Get All Users
-- Get User by ID
-- Update User
-- Delete User (soft delete)
-- Ban User
-- Unblock User
+### Health (2)
+- API Root `GET {{baseUrl}}`, Health Check `GET {{baseUrl}}/health`
 
-### Candidate
-- Get Profile
-- Update Profile
+### Authentication (9)
+- Register, Login (Candidate/Admin/Recruiter), Google Login, Refresh Token, Logout, Me, Change Password (PATCH)
 
-### Recruiter
-- Get Profile
-- Update Profile
+### Users (5, any role)
+- Get Current User `GET /users/me`, Update `PATCH /users/me {name?, avatarUrl?}`
+- Get My Role Profile `GET /users/me/profile`
+- Update candidate fields / recruiter company fields `PATCH /users/me/profile` (wrong-role fields → 400)
 
-### Admin
-- Get Profile
-- Update Profile
+### Admin (8, ADMIN only)
+- List Users (pagination/filter/search/sort), Search Users, Update Status `{isActive}`, Update Role `{role}`, Dashboard Stats, List Payments, List Assessments, Audit Logs
 
-### Problems (Public + Authenticated)
-- Get All Problems
-- Get Problem by ID
-- Create Problem (Recruiter/Admin)
-- Update Problem (Owner/Admin)
-- Delete Problem (Owner/Admin)
+### Problems (6, RECRUITER/ADMIN, flat body)
+- Create MCQ (flat — no wrapper; `correctAnswer` must match an option), List (pagination/filter/sort), Search, Get by ID, Update, Delete (soft → 404)
 
-### Assessments
-- Get All Assessments
-- Get Assessment by ID
-- Create Assessment (Recruiter/Admin)
-- Update Assessment (Owner/Admin)
-- Delete Assessment (Owner/Admin)
-- Add Problem to Assessment
-- Remove Problem from Assessment
+### Assessments (8)
+- Create DRAFT, List, Get by ID, Candidate Start `POST /assessments/:assessmentId/start`, Update + status lifecycle, Soft delete, Attach `{problemIds:[uuid]}`, Detach
 
-### Invitations
-- Send Invitation (Recruiter)
-- Get My Invitations (Candidate)
-- Accept Invitation
-- Decline Invitation
-- Get Assessment Invitations (Recruiter)
+### Invitations (4)
+- Send (recruiter), List (scoped), Accept / Reject (candidate PATCH; start-before-accept → 409)
 
-### Attempts
-- Start Attempt
-- Get My Attempts
-- Get Attempt by ID
-- Submit Attempt
-- Save Draft
+### Attempts (6)
+- My History `GET /attempts/my-attempts` (candidate; recruiter → 403), Get by ID, Submit (deadline enforced), Create/List Submissions, Submission detail. No `POST /attempts/:id/start` — use assessments start.
 
-### Submissions
-- Get Submission by ID
-- Evaluate MCQ (Auto)
-- Evaluate Code (Manual - Admin/Recruiter)
+### Submissions (1)
+- Get Submission Detail `GET /submissions/:id` (ownership-checked)
 
-### Results
-- Get My Results
-- Get Result by ID
-- Get Assessment Results (Recruiter/Admin)
+### Evaluation (5)
+- Candidate results/me, Pending queue, Evaluate (PATCH `{score, feedback?}`), Assessment results, Assessment report (cached)
 
-### Reports
-- Get Dashboard Stats (Admin)
-- Get Platform Analytics (Admin)
-- Get Candidate Report
+### Results (7)
+- My Results, Summary, Detail + breakdown (no `correctAnswer` leak, foreign → 404), Publish/Unpublish (audited, idempotent), Assessment results, Leaderboard
 
-### Leaderboard
-- Get Leaderboard
-- Get Assessment Leaderboard
+### Payments (6, real Stripe)
+- Create checkout `{assessmentId}` (server price; tamper → 400; idempotent reuse), Webhook (public, signed — unsigned → 400 by design), Verify, Get by ID, My Payments, Refund (ADMIN)
 
-### Payments
-- Create Payment Intent
-- Confirm Payment
-- Get Payment Status
+### Error Responses (3, executable)
+- 401 bad login, 403 candidate on `/admin/users`, 404 bad UUID
 
-### Admin APIs
-- Get Audit Logs
-- Get System Settings
-- Update System Settings
-
-### Health
-- Health Check
-
-## Environment Variables
-Set these in Postman environment:
+## Environment Variables (15, auto-captured via test scripts)
 
 | Variable | Value |
 |----------|-------|
-| `baseUrl` | `https://developerassessmentbackend.vercel.app` |
-| `accessToken` | (set dynamically from login) |
-| `refreshToken` | (set dynamically from login) |
-| `userId` | (set dynamically from login) |
-| `assessmentId` | (set dynamically from assessment creation) |
-| `attemptId` | (set dynamically from attempt start) |
-| `submissionId` | (set dynamically from submission) |
+| `baseUrl` | `https://developerassessmentbackend.vercel.app/api/v1` |
+| `accessToken` / `refreshToken` / `adminToken` / `recruiterToken` / `candidateToken` | auto-saved on login/register |
+| `userId` | auto-saved on login |
+| `assessmentId` / `problemId` / `invitationId` / `paymentId` / `sessionId` / `resultId` / `attemptId` / `submissionId` | auto-saved on create/checkout/results |
 
-## Testing Workflow
-1. Run **Authentication** → Login to get tokens
-2. Run **Health** → verify API is up
-3. Run **Problems** → test problem CRUD
-4. Run **Assessments** → test assessment lifecycle
-5. Run **Invitations** → test invitation flow
-6. Run **Attempts** → test attempt creation and timing
-7. Run **Submissions** → test MCQ auto-eval and code manual-eval
-8. Run **Results** → test results retrieval
-9. Run **Payments** → test Stripe payment flow
-10. Run **Admin** → test admin-only endpoints
-11. Run **Reports** → test analytics
-12. Run **Leaderboard** → test leaderboard
+Demo: `admin@assessment.com/Admin@1234`, `recruiter@assessment.com/Recruiter@1234`, `candidate@assessment.com/Candidate@1234`, `jane.candidate@assessment.com/Jane@1234`.
+
+## Testing Workflow (production E2E order)
+1. Health → API index (200 envelope).
+2. Authentication → register/login all roles, refresh rotation, logout (401/409 cases).
+3. Users → self + role profiles (+ 400 guard).
+4. Admin → lists/stats/registers/audit logs (+ 403 cases).
+5. Problems → flat MCQ create, 400 mismatch, list/search/pagination/filter/sort, soft delete → 404.
+6. Assessments → DRAFT → publish-blocked 400 → attach `{problemIds}` → PUBLISHED → candidate no-leak → amount-tamper 400 → ARCHIVED terminal → soft delete 404.
+7. Invitations → send → start-before-accept 409 → accept → paid start 402 (until Stripe PAID).
+8. Attempts → my-attempts (+ recruiter 403), submit path.
+9. Evaluation → pending queue, assessment results + cached report.
+10. Results → seeded detail/breakdown, foreign 404, publish lifecycle, leaderboard, 400/404 cases.
+11. Payments → checkout + idempotent reuse, verify/my-payments/get, webhook unsigned 400 by design, refund ADMIN.
+12. Error Responses → 401/403/404 executable checks.
+
+`npm run smoke https://developerassessmentbackend.vercel.app/api/v1` mirrors this: **87/87 PASS** on production.
 
 ## Error Codes
 | Code | Meaning |
 |------|---------|
-| 401 | Unauthorized - Invalid or missing token |
-| 402 | Payment Required - Assessment not paid |
-| 403 | Forbidden - Insufficient role |
-| 404 | Not Found - Resource doesn't exist |
-| 409 | Conflict - Resource already exists |
-| 422 | Validation Error - Invalid input |
-| 500 | Internal Server Error |
+| 200/201 | Success (201: register, problem/assessment/attempt-start/checkout/submission/invitation) |
+| 400 | Validation (`errors[]`), bad transition, publish-without-problems, amount tamper, unsigned webhook |
+| 401 | Missing/bad/expired token, bad credentials, bad Google credential, reused refresh |
+| 402 | Payment Required — paid attempt before PAID |
+| 403 | Forbidden — wrong role |
+| 404 | Not Found — soft-deleted/foreign/unknown (no leak) |
+| 409 | Conflict — duplicate email, start-before-accept, duplicate attempt |
+| 429 | Failed-auth burst only (`skipSuccessfulRequests` protects valid runs) |
+| 500 | Internal Server Error (envelope) |
 
 ## Soft Delete
-All delete operations perform soft delete (set `deletedAt` timestamp) rather than permanent deletion.
+Problems, assessments, and user deactivation are soft (`isDeleted`/`deletedAt`); reads → 404 after. Admin users filter `?isDeleted`.

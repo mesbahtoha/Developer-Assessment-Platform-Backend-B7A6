@@ -480,7 +480,7 @@ vercel --prod
 - Set all environment variables in the Vercel dashboard (Production environment).
 - After first deploy, run `npx prisma migrate deploy` and `npx prisma db seed` once against the production DB.
 - Use a **pooled** Postgres connection string (e.g., Prisma Accelerate / Supabase pooled) for serverless.
-- Add the Stripe webhook endpoint (`https://<your-domain>/api/v1/payments/webhook`) in the Stripe dashboard.
+- Add the Stripe webhook endpoint (`https://developerassessmentbackend.vercel.app/api/v1/payments/webhook`) in the Stripe dashboard.
 
 ## 👤 Admin Demo Credentials
 
