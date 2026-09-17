@@ -2,7 +2,7 @@
 import { catchAsync } from '../../shared/catchAsync';
 import { sendSuccess } from '../../shared/ApiResponse';
 import { AttemptService } from './attempt.service';
-import { CreateSubmissionInput } from './attempt.validation';
+import { CreateSubmissionInput, ListMyAttemptsQuery } from './attempt.validation';
 
 const start = catchAsync(async (req: Request, res: Response) => {
   const attempt = await AttemptService.start(req.user!, req.params.assessmentId);
@@ -38,6 +38,14 @@ const getSubmissionById = catchAsync(async (req: Request, res: Response) => {
   sendSuccess(res, { submission }, 'Submission fetched successfully');
 });
 
+const myAttempts = catchAsync(async (req: Request, res: Response) => {
+  const result = await AttemptService.myAttempts(
+    req.user!,
+    req.query as unknown as ListMyAttemptsQuery
+  );
+  sendSuccess(res, result, 'Attempt history fetched successfully');
+});
+
 export const AttemptController = {
   start,
   getById,
@@ -45,4 +53,5 @@ export const AttemptController = {
   createSubmission,
   listSubmissions,
   getSubmissionById,
+  myAttempts,
 };

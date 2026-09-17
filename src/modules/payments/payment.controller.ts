@@ -3,7 +3,7 @@ import { catchAsync } from '../../shared/catchAsync';
 import { sendSuccess } from '../../shared/ApiResponse';
 import { AuthUser } from '../../middlewares/auth';
 import { PaymentService } from './payment.service';
-import { CreateCheckoutInput } from './payment.validation';
+import { CreateCheckoutInput, ListMyPaymentsQuery } from './payment.validation';
 
 const create = catchAsync(async (req: Request, res: Response) => {
   const user = (req as unknown as { user: AuthUser }).user;
@@ -11,9 +11,16 @@ const create = catchAsync(async (req: Request, res: Response) => {
   const result = await PaymentService.createCheckoutSession(user, assessmentId, amountInCents);
   sendSuccess(
     res,
-    { url: result.session.url, sessionId: result.session.id, payment: result.payment },
-    'Checkout session created successfully',
-    201
+    {
+      url: result.session.url,
+      sessionId: result.session.id,
+      payment: result.payment,
+      reused: result.reused,
+    },
+    result.reused
+      ? 'Existing checkout session reused (no duplicate charge)'
+      : 'Checkout session created successfully',
+    result.reused ? 200 : 201
   );
 });
 
@@ -38,8 +45,17 @@ const getById = catchAsync(async (req: Request, res: Response) => {
 
 const myPayments = catchAsync(async (req: Request, res: Response) => {
   const user = (req as unknown as { user: AuthUser }).user;
-  const payments = await PaymentService.getMyPayments(user);
-  sendSuccess(res, { payments }, 'Payments fetched successfully');
+  const result = await PaymentService.getMyPayments(
+    user,
+    req.query as unknown as ListMyPaymentsQuery
+  );
+  sendSuccess(res, result, 'Payments fetched successfully');
 });
 
-export const PaymentController = { create, webhook, verify, getById, myPayments };
+const refund = catchAsync(async (req: Request, res: Response) => {
+  const actor = (req as unknown as { user: AuthUser }).user;
+  const result = await PaymentService.refundPayment(actor, req.params.id);
+  sendSuccess(res, result, 'Payment refunded successfully');
+});
+
+export const PaymentController = { create, webhook, verify, getById, myPayments, refund };

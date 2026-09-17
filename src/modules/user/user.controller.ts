@@ -2,7 +2,7 @@
 import { catchAsync } from '../../shared/catchAsync';
 import { sendSuccess } from '../../shared/ApiResponse';
 import { UserService } from './user.service';
-import { UpdateMeInput } from './user.validation';
+import { UpdateMeInput, UpdateProfileInput } from './user.validation';
 
 const getMe = catchAsync(async (req: Request, res: Response) => {
   const user = await UserService.getMe(req.user!.id);
@@ -14,4 +14,19 @@ const updateMe = catchAsync(async (req: Request, res: Response) => {
   sendSuccess(res, { user }, 'Profile updated successfully');
 });
 
-export const UserController = { getMe, updateMe };
+/** Candidate developer profile / recruiter company profile. */
+const getMyProfile = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getMyProfile(req.user!.id, req.user!.role);
+  sendSuccess(res, result, 'Profile fetched successfully');
+});
+
+const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
+  const profile = await UserService.updateMyProfile(
+    req.user!.id,
+    req.user!.role,
+    req.body as UpdateProfileInput
+  );
+  sendSuccess(res, { profile }, 'Profile updated successfully');
+});
+
+export const UserController = { getMe, updateMe, getMyProfile, updateMyProfile };

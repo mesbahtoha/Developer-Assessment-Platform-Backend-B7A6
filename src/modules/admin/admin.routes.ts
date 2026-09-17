@@ -9,6 +9,8 @@ import {
   updateUserRoleSchema,
   searchUsersQuerySchema,
   listAuditLogsQuerySchema,
+  listAdminPaymentsQuerySchema,
+  listAdminAssessmentsQuerySchema,
 } from './admin.validation';
 
 const router = Router();
@@ -47,11 +49,19 @@ router.patch(
 // ---------- Dashboard statistics ----------
 router.get('/dashboard-stats', AdminController.dashboardStats);
 
-// ---------- Payments ----------
-router.get('/payments', AdminController.listPayments);
+// ---------- Payments (filter by status/assessment/user search) ----------
+router.get(
+  '/payments',
+  validate(listAdminPaymentsQuerySchema, ['query']),
+  AdminController.listPayments
+);
 
-// ---------- Assessments ----------
-router.get('/assessments', AdminController.listAssessments);
+// ---------- Assessments (filter by status/recruiter/search) ----------
+router.get(
+  '/assessments',
+  validate(listAdminAssessmentsQuerySchema, ['query']),
+  AdminController.listAssessments
+);
 
 // ---------- Audit logs ----------
 router.get(

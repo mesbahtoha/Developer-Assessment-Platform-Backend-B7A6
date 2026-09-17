@@ -12,4 +12,16 @@ export const createSubmissionSchema = z.object({
   }),
 });
 
+export const listMyAttemptsQuerySchema = z.object({
+  query: z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(10),
+    status: z.enum(['IN_PROGRESS', 'SUBMITTED', 'EVALUATED', 'EXPIRED']).optional(),
+    assessmentId: z.string().uuid('assessmentId must be a valid UUID').optional(),
+    sortBy: z.enum(['createdAt', 'startedAt', 'submittedAt']).default('createdAt'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  }),
+});
+
 export type CreateSubmissionInput = z.infer<typeof createSubmissionSchema>['body'];
+export type ListMyAttemptsQuery = z.infer<typeof listMyAttemptsQuerySchema>['query'];

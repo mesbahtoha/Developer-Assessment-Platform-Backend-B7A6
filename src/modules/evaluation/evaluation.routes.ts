@@ -1,6 +1,6 @@
 ﻿import { Router } from 'express';
 import { verifyAuth } from '../../middlewares/auth';
-import { requireCandidate, requireRecruiter, requireRecruiterOrAdmin } from '../../middlewares/rbac';
+import { requireCandidate, requireRecruiterOrAdmin } from '../../middlewares/rbac';
 import { validate } from '../../middlewares/validate';
 import { EvaluationController } from './evaluation.controller';
 import {
@@ -24,7 +24,7 @@ router.get(
 // ---------- Evaluator/Recruiter: pending submissions list ----------
 router.get(
   '/submissions/pending',
-  requireRecruiter,
+  requireRecruiterOrAdmin,
   validate(pendingQuerySchema, ['query']),
   EvaluationController.listPending
 );
@@ -32,7 +32,7 @@ router.get(
 // ---------- Evaluator/Recruiter: evaluate a submission ----------
 router.patch(
   '/submissions/:id/evaluate',
-  requireRecruiter,
+  requireRecruiterOrAdmin,
   validate(evaluateSchema),
   EvaluationController.evaluateSubmission
 );
@@ -40,7 +40,7 @@ router.patch(
 // ---------- Recruiter: assessment results ----------
 router.get(
   '/assessments/:id/results',
-  requireRecruiter,
+  requireRecruiterOrAdmin,
   validate(listResultsQuerySchema, ['query']),
   EvaluationController.assessmentResults
 );

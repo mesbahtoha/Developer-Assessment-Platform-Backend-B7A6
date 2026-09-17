@@ -3,7 +3,8 @@ import { ApiError } from '../../shared/catchAsync';
 import { audit, auditInTx } from '../../shared/audit';
 import prisma from '../../shared/prisma';
 import { AuthUser } from '../../middlewares/auth';
-import { CreateSubmissionInput } from './attempt.validation';
+import { cacheInvalidate } from '../../shared/cache';
+import { CreateSubmissionInput, ListMyAttemptsQuery } from './attempt.validation';
 
 const EXPIRED_MSG = 'Attempt has expired; submission not allowed';
 
@@ -227,6 +228,8 @@ const submit = async (user: AuthUser, id: string) => {
     targetId: id,
     meta: { score: outcome.result.score, totalPoints: outcome.result.totalPoints },
   });
+  // New result affects report analytics and admin dashboard counters
+  await cacheInvalidate('report:assessment', 'admin:');
   return outcome;
 };
 
@@ -398,6 +401,63 @@ const getSubmissionById = async (user: AuthUser, submissionId: string) => {
   return { ...rest, problem, attempt: { id: attempt.id, candidateId: attempt.candidateId } };
 };
 
+/**
+ * Candidate assessment history: paginated + status-filterable attempt list with the
+ * final result attached (score, percentage, pass/fail).
+ */
+const myAttempts = async (user: AuthUser, query: ListMyAttemptsQuery) => {
+  const where: Prisma.AttemptWhereInput = { candidateId: user.id };
+  if (query.status) where.status = query.status;
+  if (query.assessmentId) where.assessmentId = query.assessmentId;
+
+  const [total, attempts] = await prisma.$transaction([
+    prisma.attempt.count({ where }),
+    prisma.attempt.findMany({
+      where,
+      orderBy: { [query.sortBy]: query.sortOrder },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+      select: {
+        id: true,
+        status: true,
+        startedAt: true,
+        deadlineAt: true,
+        submittedAt: true,
+        createdAt: true,
+        assessment: {
+          select: {
+            id: true,
+            title: true,
+            durationMin: true,
+            price: true,
+            passScorePercent: true,
+          },
+        },
+        result: {
+          select: {
+            score: true,
+            totalPoints: true,
+            percentage: true,
+            isPassed: true,
+            publishedAt: true,
+          },
+        },
+        _count: { select: { submissions: true } },
+      },
+    }),
+  ]);
+
+  return {
+    attempts,
+    meta: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+    },
+  };
+};
+
 export const AttemptService = {
   start,
   getById,
@@ -405,4 +465,5 @@ export const AttemptService = {
   createSubmission,
   listSubmissions,
   getSubmissionById,
+  myAttempts,
 };

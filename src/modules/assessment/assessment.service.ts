@@ -2,7 +2,12 @@
 import { ApiError } from '../../shared/catchAsync';
 import { audit } from '../../shared/audit';
 import prisma from '../../shared/prisma';
+import { cached, cacheInvalidate, cacheKey, TTL } from '../../shared/cache';
 import { AuthUser } from '../../middlewares/auth';
+
+/** Cache namespaces touched by any assessment write. */
+const invalidateAssessmentCache = (): Promise<number> =>
+  cacheInvalidate('assessments:list', 'admin:', 'report:assessment');
 import {
   CreateAssessmentInput,
   ListAssessmentsQuery,
@@ -55,10 +60,11 @@ const create = async (user: AuthUser, input: CreateAssessmentInput) => {
     targetType: 'ASSESSMENT',
     targetId: assessment.id,
   });
+  await invalidateAssessmentCache();
   return assessment;
 };
 
-const list = async (user: AuthUser, query: ListAssessmentsQuery) => {
+const fetchList = async (user: AuthUser, query: ListAssessmentsQuery) => {
   const where: Prisma.AssessmentWhereInput = { isDeleted: false };
 
   if (user.role === 'CANDIDATE') {
@@ -100,6 +106,17 @@ const list = async (user: AuthUser, query: ListAssessmentsQuery) => {
       totalPages: Math.max(1, Math.ceil(total / query.limit)),
     },
   };
+};
+
+/** Redis read-through cache for assessment listings (per role/user/query). */
+const list = async (user: AuthUser, query: ListAssessmentsQuery) => {
+  const key = cacheKey(
+    'assessments:list',
+    user.role,
+    user.role === 'RECRUITER' ? user.id : 'all',
+    JSON.stringify(query)
+  );
+  return cached(key, TTL.short, () => fetchList(user, query));
 };
 
 const getForUser = async (user: AuthUser, id: string) => {
@@ -180,6 +197,7 @@ const update = async (user: AuthUser, id: string, patch: UpdateAssessmentInput) 
     targetId: id,
     meta: { status: assessment.status },
   });
+  await invalidateAssessmentCache();
   return assessment;
 };
 
@@ -201,6 +219,7 @@ const softDelete = async (user: AuthUser, id: string) => {
     targetType: 'ASSESSMENT',
     targetId: id,
   });
+  await invalidateAssessmentCache();
   return { id };
 };
 
@@ -263,6 +282,7 @@ const attachProblems = async (user: AuthUser, id: string, problemIds: string[]) 
     meta: { problemIds },
   });
 
+  await invalidateAssessmentCache();
   return { assessmentId: id, problems: linked };
 };
 
@@ -285,6 +305,7 @@ const detachProblem = async (user: AuthUser, id: string, problemId: string) => {
     targetId: id,
     meta: { problemId },
   });
+  await invalidateAssessmentCache();
   return { assessmentId: id, problemId };
 };
 

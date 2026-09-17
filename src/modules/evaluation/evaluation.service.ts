@@ -2,6 +2,7 @@
 import { ApiError } from '../../shared/catchAsync';
 import { audit } from '../../shared/audit';
 import prisma from '../../shared/prisma';
+import { cached, cacheInvalidate, cacheKey, TTL } from '../../shared/cache';
 import { AuthUser } from '../../middlewares/auth';
 import { EvaluateInput, ListResultsQuery, PendingQuery } from './evaluation.validation';
 
@@ -165,6 +166,8 @@ const evaluateSubmission = async (user: AuthUser, submissionId: string, input: E
     targetId: submissionId,
     meta: { score: input.score, maxScore, attemptId: attempt.id },
   });
+  // Reports and admin dashboards embed evaluation figures
+  await cacheInvalidate('report:assessment', 'admin:');
   return outcome;
 };
 
@@ -229,9 +232,7 @@ const assessmentResults = async (user: AuthUser, assessmentId: string, query: Li
 
 // ============ ASSESSMENT REPORT ============
 
-const assessmentReport = async (user: AuthUser, assessmentId: string) => {
-  await assertAssessmentAccess(user, assessmentId);
-
+const buildAssessmentReport = async (_user: AuthUser, assessmentId: string) => {
   const [statusGroups, resultAgg, passCount, submissions, topScorers] = await Promise.all([
     prisma.attempt.groupBy({ by: ['status'], where: { assessmentId }, _count: { _all: true } }),
     prisma.result.aggregate({
@@ -312,6 +313,18 @@ const assessmentReport = async (user: AuthUser, assessmentId: string) => {
     perProblem,
     topScorers,
   };
+};
+
+/**
+ * Assessment report (recruiter/admin analytics: attempt status funnel, score stats,
+ * per-problem accuracy, top scorers). Heavy aggregation, so results are cached in
+ * Redis; ownership/role checks still run on every request before touching the cache.
+ */
+const assessmentReport = async (user: AuthUser, assessmentId: string) => {
+  await assertAssessmentAccess(user, assessmentId);
+  return cached(cacheKey('report:assessment', assessmentId), TTL.long, () =>
+    buildAssessmentReport(user, assessmentId)
+  );
 };
 
 export const EvaluationService = {

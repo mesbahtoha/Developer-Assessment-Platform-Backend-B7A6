@@ -2,7 +2,12 @@
 import { ApiError } from '../../shared/catchAsync';
 import { audit } from '../../shared/audit';
 import prisma from '../../shared/prisma';
+import { cached, cacheInvalidate, cacheKey, TTL } from '../../shared/cache';
 import { AuthUser } from '../../middlewares/auth';
+
+/** Cache namespaces touched by any problem-bank write. */
+const invalidateProblemCache = (): Promise<number> =>
+  cacheInvalidate('problems:', 'assessments:list', 'admin:', 'report:assessment');
 import {
   CreateProblemInput,
   ListProblemsQuery,
@@ -57,10 +62,11 @@ const create = async (user: AuthUser, input: CreateProblemInput) => {
     targetType: 'PROBLEM',
     targetId: problem.id,
   });
+  await invalidateProblemCache();
   return problem;
 };
 
-const list = async (user: AuthUser, query: ListProblemsQuery) => {
+const fetchList = async (user: AuthUser, query: ListProblemsQuery) => {
   const where: Prisma.ProblemWhereInput = {
     isDeleted: false,
     // Recruiters only see their own problem bank; ADMIN sees everything
@@ -97,6 +103,17 @@ const list = async (user: AuthUser, query: ListProblemsQuery) => {
       totalPages: Math.max(1, Math.ceil(total / query.limit)),
     },
   };
+};
+
+/** Redis read-through cache for problem listings (per role/user/filters). */
+const list = async (user: AuthUser, query: ListProblemsQuery) => {
+  const key = cacheKey(
+    'problems:list',
+    user.role,
+    user.role === 'RECRUITER' ? user.id : 'all',
+    JSON.stringify(query)
+  );
+  return cached(key, TTL.short, () => fetchList(user, query));
 };
 
 const getById = async (user: AuthUser, id: string) => {
@@ -164,6 +181,7 @@ const update = async (user: AuthUser, id: string, patch: UpdateProblemInput) => 
     targetType: 'PROBLEM',
     targetId: id,
   });
+  await invalidateProblemCache();
   return problem;
 };
 
@@ -185,10 +203,23 @@ const softDelete = async (user: AuthUser, id: string) => {
     targetType: 'PROBLEM',
     targetId: id,
   });
+  await invalidateProblemCache();
   return { id };
 };
 
+/** Redis-cached keyword search (short TTL, invalidated on any problem write). */
 const search = async (user: AuthUser, q: string, limit: number) => {
+  const key = cacheKey(
+    'problems:search',
+    user.role,
+    user.role === 'RECRUITER' ? user.id : 'all',
+    q.toLowerCase(),
+    limit
+  );
+  return cached(key, TTL.short, () => fetchSearch(user, q, limit));
+};
+
+const fetchSearch = async (user: AuthUser, q: string, limit: number) => {
   const problems = await prisma.problem.findMany({
     where: {
       isDeleted: false,

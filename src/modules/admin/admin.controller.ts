@@ -3,6 +3,9 @@ import { catchAsync } from '../../shared/catchAsync';
 import { sendSuccess } from '../../shared/ApiResponse';
 import { AdminService } from './admin.service';
 import {
+  ListAdminAssessmentsQuery,
+  ListAdminPaymentsQuery,
+  ListAuditLogsQuery,
   ListUsersQuery,
   SearchUsersQuery,
 } from './admin.validation';
@@ -20,7 +23,8 @@ const searchUsers = catchAsync(async (req: Request, res: Response) => {
 
 const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
   const body = req.body as { isActive: boolean };
-  const result = await AdminService.updateUserStatus(req.params.id, body.isActive);
+  const actor = (req as unknown as { user: AuthUser }).user;
+  const result = await AdminService.updateUserStatus(req.params.id, body.isActive, actor);
   sendSuccess(res, result, 'User status updated successfully');
 });
 
@@ -37,23 +41,21 @@ const dashboardStats = catchAsync(async (_req: Request, res: Response) => {
 });
 
 const listPayments = catchAsync(async (req: Request, res: Response) => {
-  const user = (req as unknown as { user: AuthUser }).user;
   const result = await AdminService.listPayments(
-    user,
-    req.query as unknown as { page?: number; limit?: number }
+    req.query as unknown as ListAdminPaymentsQuery
   );
   sendSuccess(res, result, 'Payments fetched successfully');
 });
 
-const listAssessments = catchAsync(async (_req: Request, res: Response) => {
-  const result = await AdminService.listAssessments();
+const listAssessments = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.listAssessments(
+    req.query as unknown as ListAdminAssessmentsQuery
+  );
   sendSuccess(res, result, 'Assessments fetched successfully');
 });
 
 const listAuditLogs = catchAsync(async (req: Request, res: Response) => {
-  const result = await AdminService.listAuditLogs(
-    req.query as unknown as { page?: number; limit?: number; action?: string }
-  );
+  const result = await AdminService.listAuditLogs(req.query as unknown as ListAuditLogsQuery);
   sendSuccess(res, result, 'Audit logs fetched successfully');
 });
 

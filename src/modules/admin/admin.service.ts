@@ -4,7 +4,14 @@ import { publicUserSelect } from '../user/user.service';
 import { AuthUser } from '../../middlewares/auth';
 import { ApiError } from '../../shared/catchAsync';
 import { audit } from '../../shared/audit';
-import { ListUsersQuery, SearchUsersQuery } from './admin.validation';
+import { cached, cacheInvalidate, cacheKey, TTL } from '../../shared/cache';
+import {
+  ListAdminAssessmentsQuery,
+  ListAdminPaymentsQuery,
+  ListAuditLogsQuery,
+  ListUsersQuery,
+  SearchUsersQuery,
+} from './admin.validation';
 
 const buildWhere = (query: ListUsersQuery): Prisma.UserWhereInput => {
   const where: Prisma.UserWhereInput = {};
@@ -77,20 +84,23 @@ const searchUsers = async (query: SearchUsersQuery) => {
   };
 };
 
-const updateUserStatus = async (userId: string, isActive: boolean) => {
+const updateUserStatus = async (userId: string, isActive: boolean, actor: AuthUser) => {
   const user = await prisma.user.findFirst({ where: { id: userId } });
   if (!user) throw ApiError.notFound('User not found');
+  if (user.id === actor.id) throw ApiError.forbidden('You cannot deactivate your own account');
   const updated = await prisma.user.update({
     where: { id: userId },
     data: { isDeleted: !isActive, deletedAt: isActive ? null : new Date() },
     select: publicUserSelect,
   });
   await audit({
+    actorId: actor.id,
     action: 'USER_STATUS_UPDATED',
     targetType: 'USER',
     targetId: userId,
-    meta: { isActive },
+    meta: { isActive, isDeleted: !isActive, previousIsDeleted: user.isDeleted },
   });
+  await cacheInvalidate('admin:');
   return { user: updated };
 };
 
@@ -117,66 +127,147 @@ const updateUserRole = async (
     targetId: userId,
     meta: { from: user.role, to: newRole },
   });
+  await cacheInvalidate('admin:');
   return { user: updated };
 };
 
-const dashboardStats = async () => {
+const buildDashboardStats = async () => {
   const [
     totalUsers,
+    usersByRole,
+    totalProblems,
     totalAssessments,
-    totalPayments,
+    publishedAssessments,
+    totalInvitations,
     totalAttempts,
+    attemptsByStatus,
     totalResults,
+    passedResults,
+    paymentGroups,
     paidUsers,
-    activeAssessments,
   ] = await Promise.all([
     prisma.user.count({ where: { isDeleted: false } }),
+    prisma.user.groupBy({ by: ['role'], where: { isDeleted: false }, _count: { _all: true } }),
+    prisma.problem.count({ where: { isDeleted: false } }),
+    prisma.assessment.count({ where: { isDeleted: false } }),
     prisma.assessment.count({ where: { status: 'PUBLISHED', isDeleted: false } }),
-    prisma.payment.count({ where: { status: 'PAID' } }),
-    prisma.attempt.count({ where: { status: 'IN_PROGRESS' } }),
+    prisma.invitation.count(),
+    prisma.attempt.count(),
+    prisma.attempt.groupBy({ by: ['status'], _count: { _all: true } }),
+    prisma.result.count(),
     prisma.result.count({ where: { isPassed: true } }),
-    prisma.user.count({
-      where: {
-        payments: { some: { status: 'PAID' } },
-        isDeleted: false,
-      },
-    }),
-    prisma.assessment.count({ where: { status: 'PUBLISHED', isDeleted: false } }),
+    prisma.payment.groupBy({ by: ['status'], _count: { _all: true }, _sum: { amount: true } }),
+    prisma.user.count({ where: { payments: { some: { status: 'PAID' } }, isDeleted: false } }),
   ]);
 
+  const usersByRoleMap: Record<string, number> = {};
+  for (const group of usersByRole) usersByRoleMap[group.role] = group._count._all;
+
+  const attemptsByStatusMap: Record<string, number> = {};
+  for (const group of attemptsByStatus) attemptsByStatusMap[group.status] = group._count._all;
+
+  const paymentsByStatus: Record<string, { count: number; amountCents: number }> = {};
+  let paidAmountCents = 0;
+  let refundedAmountCents = 0;
+  for (const group of paymentGroups) {
+    const amountCents = group._sum.amount ?? 0;
+    paymentsByStatus[group.status] = { count: group._count._all, amountCents };
+    if (group.status === 'PAID') paidAmountCents += amountCents;
+    if (group.status === 'REFUNDED') refundedAmountCents += amountCents;
+  }
+
+  const passRate =
+    totalResults === 0 ? 0 : Math.round((passedResults / totalResults) * 10000) / 100;
+
   return {
+    users: { total: totalUsers, byRole: usersByRoleMap, paidUsers },
+    problems: { total: totalProblems },
+    assessments: { total: totalAssessments, published: publishedAssessments },
+    invitations: { total: totalInvitations },
+    attempts: { total: totalAttempts, byStatus: attemptsByStatusMap },
+    results: { total: totalResults, passed: passedResults, failed: totalResults - passedResults, passRate },
+    payments: {
+      byStatus: paymentsByStatus,
+      paidCount: paymentsByStatus.PAID?.count ?? 0,
+      grossAmountCents: paidAmountCents,
+      refundedAmountCents,
+      netRevenueCents: paidAmountCents - refundedAmountCents,
+    },
+    // Legacy flat counters kept for backwards compatibility with existing clients.
     totalUsers,
-    totalAssessments,
-    totalPayments,
+    totalAssessments: publishedAssessments,
+    totalPayments: paymentsByStatus.PAID?.count ?? 0,
     totalAttempts,
-    totalResults,
+    totalResults: passedResults,
     paidUsers,
-    activeAssessments,
+    activeAssessments: attemptsByStatusMap.IN_PROGRESS ?? 0,
   };
 };
 
-const listPayments = async (user: AuthUser, query?: { page?: number; limit?: number }) => {
-  const page = query?.page ?? 1;
-  const limit = query?.limit ?? 10;
+/** Cached: dashboard aggregation is expensive and only needs to be near-real-time. */
+const dashboardStats = async () =>
+  cached(cacheKey('admin:dashboard-stats'), TTL.short, buildDashboardStats);
+
+/**
+ * Admin payment register with filtering/sorting/pagination.
+ * Uses explicit `select`s so password hashes and other secrets are never serialized.
+ */
+const listPayments = async (query: ListAdminPaymentsQuery) => {
+  const { page, limit } = query;
   const where: Prisma.PaymentWhereInput = {};
 
-  if (user.role !== 'ADMIN') {
-    where.userId = user.id;
+  if (query.status) where.status = query.status;
+  if (query.assessmentId) where.assessmentId = query.assessmentId;
+  if (query.search) {
+    where.user = {
+      OR: [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+      ],
+    };
   }
 
   const [total, payments] = await prisma.$transaction([
     prisma.payment.count({ where }),
     prisma.payment.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { [query.sortBy]: query.sortOrder },
       skip: (page - 1) * limit,
       take: limit,
-      include: { user: true, assessment: true },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        status: true,
+        provider: true,
+        stripeSessionId: true,
+        stripePaymentIntentId: true,
+        paidAt: true,
+        refundedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: { id: true, name: true, email: true, role: true } },
+        assessment: { select: { id: true, title: true, price: true } },
+      },
     }),
   ]);
 
+  // Status roll-up for the filtered set (kept out of the tx array for clean typing)
+  const summary = await prisma.payment.groupBy({
+    by: ['status'],
+    where,
+    _count: { _all: true },
+    _sum: { amount: true },
+  });
+
+  const byStatus: Record<string, { count: number; amountCents: number }> = {};
+  for (const group of summary) {
+    byStatus[group.status] = { count: group._count._all, amountCents: group._sum.amount ?? 0 };
+  }
+
   return {
     payments,
+    byStatus,
     meta: {
       page,
       limit,
@@ -186,32 +277,67 @@ const listPayments = async (user: AuthUser, query?: { page?: number; limit?: num
   };
 };
 
-const listAssessments = async () => {
+const listAssessments = async (query: ListAdminAssessmentsQuery) => {
+  const { page, limit } = query;
   const where: Prisma.AssessmentWhereInput = { isDeleted: false };
+
+  if (query.status) where.status = query.status;
+  if (query.recruiterId) where.recruiterId = query.recruiterId;
+  if (query.search) {
+    where.OR = [
+      { title: { contains: query.search, mode: 'insensitive' } },
+      { description: { contains: query.search, mode: 'insensitive' } },
+    ];
+  }
 
   const [total, assessments] = await prisma.$transaction([
     prisma.assessment.count({ where }),
     prisma.assessment.findMany({
       where,
-      include: { recruiter: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { [query.sortBy]: query.sortOrder },
+      skip: (page - 1) * limit,
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        durationMin: true,
+        price: true,
+        currency: true,
+        passScorePercent: true,
+        createdAt: true,
+        updatedAt: true,
+        recruiter: { select: { id: true, name: true, email: true } },
+        _count: { select: { problems: true, invitations: true, attempts: true, payments: true } },
+      },
     }),
   ]);
 
   return {
     assessments,
     meta: {
+      page,
+      limit,
       total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     },
   };
 };
 
-const listAuditLogs = async (query: { page?: number; limit?: number; action?: string }) => {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 50;
+const listAuditLogs = async (query: ListAuditLogsQuery) => {
+  const { page, limit } = query;
   const where: Prisma.AuditLogWhereInput = {};
 
   if (query.action) where.action = query.action;
+  if (query.actorId) where.actorId = query.actorId;
+  if (query.targetType) where.targetType = query.targetType;
+  if (query.search) {
+    where.OR = [
+      { action: { contains: query.search, mode: 'insensitive' } },
+      { targetType: { contains: query.search, mode: 'insensitive' } },
+    ];
+  }
 
   const [total, logs] = await prisma.$transaction([
     prisma.auditLog.count({ where }),
