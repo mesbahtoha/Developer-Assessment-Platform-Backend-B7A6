@@ -6,7 +6,7 @@ A production-ready REST API for companies to assess developers: recruiters build
 
 | | |
 |---|---|
-| **Live API** | `https://<your-project>.vercel.app` *(deployed — see [Live API](#-live-api))* |
+| **Live API** | `https://developerassessmentbackend.vercel.app` |
 | **API Docs** | `POSTMAN.json` collection + [Postman Documentation](#-postman-documentation) |
 | **Demo Video** | [Demo Video](#-demo-video) |
 | **Database** | PostgreSQL (Prisma ORM) |
@@ -170,17 +170,18 @@ Prisma Client  ──▶  PostgreSQL
 
 ## 🌍 API Endpoint List
 
-Base URL: `/api/v1` — **62 endpoints** total.
+Base URL: `/api/v1` — **71 requests** in `POSTMAN.json` (13 folders, 15 variables).
 
-### Authentication (7)
+### Authentication (9 — 3 role logins share one route)
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | POST | `/auth/register` | Public | Register (default role: CANDIDATE) |
-| POST | `/auth/login` | Public | Login, returns access + refresh tokens |
+| POST | `/auth/login` | Public | Login, returns access + refresh tokens (collection has Candidate/Admin/Recruiter variants) |
 | POST | `/auth/refresh-token` | Public (refresh token) | Rotate refresh token, new access token |
 | POST | `/auth/logout` | Authenticated | Revoke refresh session |
-| POST | `/auth/change-password` | Authenticated | Change password (rehashes, revokes sessions) |
-| POST | `/auth/google` | Public | Google (GCP) ID-token login / signup |
+| PATCH | `/auth/change-password` | Authenticated | Change password (rehashes, revokes sessions) |
+| POST | `/auth/google` | Public | Google (GCP) ID-token login / signup (`credential` + optional `role`) |
+| POST | `/auth/social-login` | Public | Alias of `/auth/google` (same flow) |
 | GET | `/auth/me` | Authenticated | Current session user |
 
 ### Users / Profiles (4)
@@ -194,7 +195,7 @@ Base URL: `/api/v1` — **62 endpoints** total.
 ### Problem Bank (6) — RECRUITER/ADMIN
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/problems` | Create MCQ/CODE problem |
+| POST | `/problems` | Create MCQ/CODE problem (flat body — no `{ "problem" }` wrapper) |
 | GET | `/problems` | List with `?page&limit&type&difficulty&tags` |
 | GET | `/problems/search?q=` | Search by title/prompt |
 | GET | `/problems/:id` | Single problem (answer key hidden from candidates) |
@@ -210,9 +211,8 @@ Base URL: `/api/v1` — **62 endpoints** total.
 | POST | `/assessments/:assessmentId/start` | CANDIDATE | Start timed attempt (invitation + payment + duplicate guards) |
 | PATCH | `/assessments/:id` | RECRUITER/ADMIN | Update + status transitions |
 | DELETE | `/assessments/:id` | RECRUITER/ADMIN | Soft delete |
-| POST | `/assessments/:id/problems` | RECRUITER/ADMIN | Attach problems (+ point overrides) |
+| POST | `/assessments/:id/problems` | RECRUITER/ADMIN | Attach problems via `{ "problemIds": ["uuid"] }` |
 | DELETE | `/assessments/:id/problems/:problemId` | RECRUITER/ADMIN | Detach problem |
-| GET | `/assessments/my-assessments` | RECRUITER/ADMIN | Own assessments (filter/sort) |
 
 ### Invitations (4)
 | Method | Endpoint | Access | Description |
@@ -499,24 +499,24 @@ These are overridable via the `ADMIN_EMAIL` / `ADMIN_PASSWORD` env vars at seed 
 
 ## 🌐 Live API
 
-> **Base URL:** `https://<your-project>.vercel.app/api/v1`
->
-> *(Placeholder — update this with the final Vercel/Render production URL after the last deployment.)*
+> **Base URL:** `https://developerassessmentbackend.vercel.app/api/v1`
 
 Quick health check after deploy:
 
 ```bash
-curl https://<your-project>.vercel.app/api/v1
+curl https://developerassessmentbackend.vercel.app/api/v1
 # → { "success": true, "message": "...", "data": { ... } }
+curl https://developerassessmentbackend.vercel.app/api/v1/health
+# → { "success": true, "message": "API is healthy", "data": { "status": "ok", ... } }
 ```
 
 ## 📮 Postman Documentation
 
-> **Collection import:** [`POSTMAN.json`](./POSTMAN.json) in the repo root — covers all 62 endpoints with role-based folders and example payloads.
->
-> **Published docs (placeholder):** `https://documenter.getpostman.com/view/<your-collection-id>`
->
-> *(Placeholder — publish the collection via Postman → "Publish" → replace this link after the final run.)*
+> **Collection import:** [`POSTMAN.json`](./POSTMAN.json) in the repo root — 71 requests
+> across 13 folders (Health, Authentication, Users, Admin, Problems, Assessments,
+> Invitations, Attempts, Submissions, Evaluation, Results, Payments, Error Responses),
+> 15 collection variables (`baseUrl` = production URL above), test scripts auto-capture
+> tokens/IDs, and every body matches the live Zod schemas. Human guide: [`POSTMAN.md`](./POSTMAN.md).
 
 ## 🎥 Demo Video
 
@@ -534,12 +534,12 @@ curl https://<your-project>.vercel.app/api/v1
 
 ## 📄 Submission Summary
 
-```
+```text
 Project Name    : Developer Assessment & Coding Platform (Backend)
 Backend Repo    : https://github.com/mesbahtoha/Developer-Assessment-Platform-Backend-B7A6
-Live API        : https://<your-project>.vercel.app
-API Docs        : https://documenter.getpostman.com/view/<your-collection-id>
-Demo Video      : https://drive.google.com/file/d/<your-video-id>/view
+Live API        : https://developerassessmentbackend.vercel.app
+Live API (v1)   : https://developerassessmentbackend.vercel.app/api/v1
+API Docs        : POSTMAN.json (71 requests) + POSTMAN.md in repo root
 Admin Email     : admin@assessment.com
 Admin Password  : Admin@1234
 ```

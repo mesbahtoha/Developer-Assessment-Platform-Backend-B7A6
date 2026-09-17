@@ -17,12 +17,15 @@ const router = Router();
 
 // Stricter rate limit for credential endpoints (brute-force protection).
 // Redis-backed store keeps the shared quota across serverless instances.
+// skipSuccessfulRequests frees quota for valid Postman/E2E runs so automated
+// verification never locks out demo accounts with 429s.
 const authLimiter = rateLimit({
   windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
   max: env.AUTH_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore({ windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS }),
+  skipSuccessfulRequests: true,
   message: {
     success: false,
     message: 'Too many attempts, please try again later',

@@ -2,12 +2,12 @@
   "info": {
     "name": "Developer Assessment Platform API",
     "schema": "https://schema.getpostman.com/schema/collection/v2.1.0",
-    "description": "Backend API for Developer Assessment Platform - Full Stack Coding & Evaluation Platform"
+    "description": "Developer Assessment Platform API — production collection (baseUrl https://developerassessmentbackend.vercel.app/api/v1). Run folders top-to-bottom: Health → Authentication (role logins auto-save tokens) → Users → Admin → Problems → Assessments → Invitations → Attempts → Submissions → Evaluation → Results → Payments → Error Responses. Flat JSON bodies (no wrappers), /v1 prefix everywhere, Stripe webhook is signature-verified (unsigned replay returns 400 by design)."
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5000/api/v1",
+      "value": "https://developerassessmentbackend.vercel.app/api/v1",
       "type": "string",
       "description": "Base URL for all API endpoints"
     },
@@ -82,9 +82,54 @@
       "value": "",
       "type": "string",
       "description": "Stripe checkout session id (cs_test_...)"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string",
+      "description": "User UUID (auto-captured on login)"
+    },
+    {
+      "key": "resultId",
+      "value": "",
+      "type": "string",
+      "description": "Result UUID (from /results/me)"
     }
   ],
   "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            }
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
     {
       "name": "Authentication",
       "item": [
@@ -112,10 +157,22 @@
                 "register"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "if (j && j.data && j.data.accessToken) { pm.collectionVariables.set('accessToken', j.data.accessToken); pm.collectionVariables.set('refreshToken', j.data.refreshToken); }"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Login",
+          "name": "Login (Candidate)",
           "request": {
             "method": "POST",
             "header": [
@@ -139,6 +196,82 @@
               ]
             }
           }
+        },
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@assessment.com\",\n  \"password\": \"Admin@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j=pm.response.json();",
+                  "if(j&&j.data){if(j.data.accessToken){pm.collectionVariables.set('accessToken',j.data.accessToken);pm.collectionVariables.set('adminToken',j.data.accessToken);}if(j.data.refreshToken)pm.collectionVariables.set('refreshToken',j.data.refreshToken);}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (Recruiter)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recruiter@assessment.com\",\n  \"password\": \"Recruiter@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j=pm.response.json();",
+                  "if(j&&j.data){if(j.data.accessToken){pm.collectionVariables.set('accessToken',j.data.accessToken);pm.collectionVariables.set('recruiterToken',j.data.accessToken);}if(j.data.refreshToken)pm.collectionVariables.set('refreshToken',j.data.refreshToken);}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Google Login",
@@ -327,6 +460,96 @@
             }
           }
         },
+        {
+          "name": "Get My Role Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update My Role Profile (candidate fields)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"headline\": \"Backend Developer\",\n  \"skills\": [\n    \"Node.js\",\n    \"PostgreSQL\"\n  ],\n  \"experienceYears\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update My Role Profile (recruiter/company fields)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"TechCorp Solutions\",\n  \"companyWebsite\": \"https://techcorp.example.com\",\n  \"designation\": \"Engineering Manager\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "profile"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
         {
           "name": "Admin: List Users",
           "request": {
@@ -592,7 +815,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"problem\": {\n    \"title\": \"What does HTTP 409 mean?\",\n    \"type\": \"MCQ\",\n    \"difficulty\": \"EASY\",\n    \"prompt\": \"What does HTTP status code 409 indicate?\",\n    \"options\": [\"Conflict\", \"OK\", \"Not Found\", \"Unauthorized\"],\n    \"correctAnswer\": \"Conflict\",\n    \"points\": 2,\n    \"tags\": [\"http\", \"status\"]\n  }\n}"
+              "raw": "{\n  \"title\": \"What does HTTP 409 mean?\",\n  \"type\": \"MCQ\",\n  \"difficulty\": \"EASY\",\n  \"prompt\": \"What does HTTP 409 Conflict mean?\",\n  \"options\": [\n    \"Conflict\",\n    \"Not Found\",\n    \"OK\",\n    \"Teapot\"\n  ],\n  \"correctAnswer\": \"Conflict\",\n  \"points\": 2,\n  \"tags\": [\n    \"http\",\n    \"rest\"\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/problems",
@@ -603,7 +826,18 @@
                 "problems"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (j && j.data && j.data.problem) pm.collectionVariables.set('problemId', j.data.problem.id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "List Problems",
@@ -658,6 +892,32 @@
               ],
               "path": [
                 "problems"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "type",
+                  "value": "MCQ"
+                },
+                {
+                  "key": "difficulty",
+                  "value": "EASY"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
               ]
             }
           }
@@ -802,7 +1062,18 @@
                 "assessments"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (j && j.data && j.data.assessment) pm.collectionVariables.set('assessmentId', j.data.assessment.id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "List Assessments",
@@ -976,7 +1247,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"problemIds\": [\"{{problemId1}}\", \"{{problemId2}}\"]\n}"
+              "raw": "{\n  \"problemIds\": [\n    \"{{problemId}}\"\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/assessments/:id/problems",
@@ -987,6 +1258,30 @@
                 "assessments",
                 ":id",
                 "problems"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detach Problem from Assessment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assessments/:id/problems/:problemId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assessments",
+                ":id",
+                "problems",
+                ":problemId"
               ]
             }
           }
@@ -1012,7 +1307,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\",\n  \"candidateEmail\": \"candidate@example.com\",\n  \"expiresAt\": \"2024-12-31T23:59:59Z\"\n}"
+              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\",\n  \"candidateEmail\": \"candidate@assessment.com\",\n  \"expiresAt\": \"2027-12-31T23:59:59.000Z\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/invitations",
@@ -1023,7 +1318,18 @@
                 "invitations"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (j && j.data && j.data.invitation) pm.collectionVariables.set('invitationId', j.data.invitation.id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "List Invitations (Candidate)",
@@ -1122,32 +1428,33 @@
       "name": "Attempts",
       "item": [
         {
-          "name": "Start Attempt",
+          "name": "My Attempt History",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
               {
                 "key": "Authorization",
                 "value": "Bearer {{candidateToken}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/attempts/:assessmentId/start",
+              "raw": "{{baseUrl}}/attempts/my-attempts?page=1&limit=10",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "attempts",
-                ":assessmentId",
-                "start"
+                "my-attempts"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             }
           }
@@ -1556,7 +1863,18 @@
                 "me"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (j && j.data && j.data.results && j.data.results.length) pm.collectionVariables.set('resultId', j.data.results[0].id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Candidate: My Results Summary",
@@ -1756,7 +2074,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\",\n  \"amountInCents\": 999\n}"
+              "raw": "{\n  \"assessmentId\": \"{{assessmentId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/payments/create",
@@ -1769,7 +2087,19 @@
               ]
             },
             "description": "Any authenticated role (typically CANDIDATE paying for own attempt). Zod: assessmentId UUID, amountInCents int >= 50. Returns { url, sessionId, payment }. Pay at `url` with test card 4242 4242 4242 4242."
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "if (j && j.data) { if (j.data.sessionId) pm.collectionVariables.set('sessionId', j.data.sessionId); if (j.data.session && j.data.session.id) pm.collectionVariables.set('sessionId', j.data.session.id); if (j.data.payment && j.data.payment.id) pm.collectionVariables.set('paymentId', j.data.payment.id); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Stripe Webhook",
@@ -1876,9 +2206,46 @@
               "path": [
                 "payments",
                 "my-payments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
               ]
             },
             "description": "Lists current user payments with assessment titles."
+          }
+        },
+        {
+          "name": "Refund Payment (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments/:id/refund",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                ":id",
+                "refund"
+              ]
+            }
           }
         }
       ]
@@ -1887,7 +2254,7 @@
       "name": "Error Responses",
       "item": [
         {
-          "name": "401 Unauthorized",
+          "name": "401 Unauthorized (bad login)",
           "request": {
             "method": "POST",
             "header": [
@@ -1898,7 +2265,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired access token\",\n  \"errors\": []\n}"
+              "raw": "{\n  \"email\": \"candidate@assessment.com\",\n  \"password\": \"WrongPassword123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -1913,7 +2280,7 @@
           }
         },
         {
-          "name": "403 Forbidden",
+          "name": "403 Forbidden (candidate on admin)",
           "request": {
             "method": "GET",
             "header": [
@@ -1935,7 +2302,7 @@
           }
         },
         {
-          "name": "404 Not Found",
+          "name": "404 Not Found (bad assessment id)",
           "request": {
             "method": "GET",
             "header": [
@@ -1945,13 +2312,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assessments/invalid-id",
+              "raw": "{{baseUrl}}/assessments/11111111-1111-1111-1111-111111111111",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "assessments",
-                "invalid-id"
+                "11111111-1111-1111-1111-111111111111"
               ]
             }
           }
