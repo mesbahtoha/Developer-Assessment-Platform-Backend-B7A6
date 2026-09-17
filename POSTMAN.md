@@ -1,433 +1,891 @@
-# Postman Collection Documentation
+# 🚀 Developer Assessment Platform API
 
-## Developer Assessment Platform API
+> **Production API:** `https://developerassessmentbackend.vercel.app/api/v1`
 
-### Collection: `Developer Assessment Platform API`
+A complete REST API for a **Developer Assessment Platform** supporting authentication, role-based user management, coding/MCQ problems, assessments, invitations, attempts, submissions, evaluation, reporting, and Stripe payments.
 
-Import this collection into Postman to test all APIs. The collection contains **50+ meaningful endpoints** covering authentication, user management, problems, assessments, invitations, attempts, submissions, evaluation, results, and payments.
-
----
-
-## 📦 Environment Variables
-
-Configure these environment variables in Postman before running requests:
-
-| Variable | Type | Description | Default |
-
-|---|---|---|---|
-
-| `baseUrl` | String | Base URL for all APIs | `https://developerassessmentbackend.vercel.app/api/v1` |
-
-| `accessToken` | String | JWT access token for candidate users | `` (empty) |
-
-| `refreshToken` | String | JWT refresh token for token rotation | `` (empty) |
-
-| `adminToken` | String | JWT access token for admin user | `` (empty) |
-
-| `recruiterToken` | String | JWT access token for recruiter user | `` (empty) |
-
-| `candidateToken` | String | JWT access token for candidate user | `` (empty) |
-
-### How to Set Environment Variables
-
-1. Open Postman → Click the **Environment** dropdown (top right)
-
-2. Click **Manage Environments** → Add new environment named `DeveloperAssessment`
-
-3. Add the variables above with your desired values
-
-4. Select the `DeveloperAssessment` environment from the dropdown
-
-### Demo Credentials (from seed data)
-
-| Role | Email | Password |
-
-|---|---|---|
-
-| **Admin** | `admin@assessment.com` | `Admin@1234` |
-
-| **Recruiter** | `recruiter@assessment.com` | `Recruiter@1234` |
-
-| **Candidate** | `candidate@assessment.com` | `Candidate@1234` |
-
-| **Jane Candidate** | `jane.candidate@assessment.com` | `Jane@1234` |
+The included Postman collection contains **50+ meaningful API endpoints** with full business logic, RBAC authorization, validation, error handling, pagination, filtering, and payment integration.
 
 ---
 
-## 🔐 Authentication Flow
+## 📌 API Overview
 
-### 1. Obtain Tokens
+| Feature                      | Supported            |
+| ---------------------------- | -------------------- |
+| 🔐 Authentication            | ✅ JWT + Google OAuth |
+| 👥 User Management           | ✅                    |
+| 🧩 Problem Bank              | ✅ MCQ + Coding       |
+| 📝 Assessments               | ✅                    |
+| 📩 Invitations               | ✅                    |
+| ⏱️ Assessment Attempts       | ✅                    |
+| 📤 Submissions               | ✅                    |
+| 🧑‍💻 Manual Evaluation      | ✅                    |
+| 📊 Results & Reports         | ✅                    |
+| 💳 Stripe Payments           | ✅                    |
+| 🔒 Role-Based Access Control | ✅                    |
+| ✅ Zod Validation             | ✅                    |
+| 📄 Pagination & Filtering    | ✅                    |
+| ⚠️ Error Handling            | ✅                    |
+| 🧪 Postman Collection        | ✅ 50+ endpoints      |
 
-**Login as Admin:**
+### Supported Roles
 
-- `POST /api/v1/auth/login`
+* **ADMIN** — Platform administration and reporting
+* **RECRUITER** — Create assessments, manage problems, invite candidates, and evaluate submissions
+* **CANDIDATE** — Accept invitations, purchase assessments, take assessments, submit answers, and view results
 
-- Body: `{ "email": "admin@assessment.com", "password": "Admin@1234" }`
+---
 
-- Response: `{ "accessToken": "...", "refreshToken": "...", "user": {...} }`
+# 📦 Postman Collection
 
-**Login as Recruiter:**
+The repository includes a ready-to-import Postman collection:
 
-- `POST /api/v1/auth/login`
-
-- Body: `{ "email": "recruiter@assessment.com", "password": "Recruiter@1234" }`
-
-**Login as Candidate:**
-
-- `POST /api/v1/auth/login`
-
-- Body: `{ "email": "candidate@assessment.com", "password": "Candidate@1234" }`
-
-### 2. Set Authorization Header
-
-For all protected routes, the collection automatically adds:
-
+```text
+POSTMAN.json
 ```
 
-Authorization: Bearer {{accessToken}}
+Import the collection into Postman to test the complete API workflow.
 
+### Collection Structure
+
+```text
+Developer Assessment Platform API
+│
+├── 🔐 Authentication
+├── 👥 Users
+├── 🧩 Problems
+├── 📝 Assessments
+├── 📩 Invitations
+├── ⏱️ Attempts
+├── 📤 Submissions
+├── 🧑‍💻 Evaluation
+├── 💳 Payments
+└── ⚠️ Error Responses
 ```
 
-*(Or `{{recruiterToken}}`, `{{adminToken}}`, `{{candidateToken}}` depending on the user role)*
+---
 
-### 3. Token Refresh
+# 🌐 Base URL
 
-- Use `POST /api/v1/auth/refresh-token` with the current `refreshToken`
+```text
+https://developerassessmentbackend.vercel.app/api/v1
+```
 
-- The new access token is used automatically by the collection variables
+For local development:
+
+```text
+http://localhost:5000/api/v1
+```
 
 ---
 
-## 📁 Folder Structure
+# 🔧 Postman Environment
 
-The collection is organized into these folders:
+Create a Postman environment named:
 
-1. **Authentication** - Register, login, Google auth, logout, profile, password change
+```text
+DeveloperAssessment
+```
 
-2. **Users** - Profile management, admin user listing/management
+Then configure the following variables:
 
-3. **Problems** - Problem bank (MCQ/CODE) create/list/get/update/delete
+| Variable         | Type   | Description              | Default                                                |
+| ---------------- | ------ | ------------------------ | ------------------------------------------------------ |
+| `baseUrl`        | String | API base URL             | `https://developerassessmentbackend.vercel.app/api/v1` |
+| `accessToken`    | String | General JWT access token | Empty                                                  |
+| `refreshToken`   | String | JWT refresh token        | Empty                                                  |
+| `adminToken`     | String | Admin access token       | Empty                                                  |
+| `recruiterToken` | String | Recruiter access token   | Empty                                                  |
+| `candidateToken` | String | Candidate access token   | Empty                                                  |
 
-4. **Assessments** - Assessment lifecycle (create, publish, start attempts)
+### Configure Environment
 
-5. **Invitations** - Send/accept/reject assessment invitations
-
-6. **Attempts** - Start/manage/submit assessment attempts
-
-7. **Submissions** - View submission details
-
-8. **Evaluation** - Manual evaluation, results, reports
-
-9. **Payments** - Stripe checkout, webhook, payment history
-
-10. **Error Responses** - 401, 403, 404 error examples
+1. Open **Postman**
+2. Open the **Environment** dropdown
+3. Select **Manage Environments**
+4. Create a new environment named `DeveloperAssessment`
+5. Add the variables above
+6. Select the environment before testing the API
 
 ---
 
-## 🔍 Endpoint Reference
+# 👤 Demo Credentials
 
-### Authentication Folder
+The following accounts are available from the seed data:
 
-| Endpoint | Method | Auth Required | Description |
+| Role          | Email                           | Password         |
+| ------------- | ------------------------------- | ---------------- |
+| **Admin**     | `admin@assessment.com`          | `Admin@1234`     |
+| **Recruiter** | `recruiter@assessment.com`      | `Recruiter@1234` |
+| **Candidate** | `candidate@assessment.com`      | `Candidate@1234` |
+| **Candidate** | `jane.candidate@assessment.com` | `Jane@1234`      |
 
-|---|---|---|---|
-
-| `POST /auth/register` | POST | No | Register new user |
-
-| `POST /auth/login` | POST | No | Login & get JWT tokens |
-
-| `POST /auth/google` | POST | No | Google OAuth login |
-
-| `POST /auth/refresh-token` | POST | Yes (refreshToken) | Rotate access token |
-
-| `POST /auth/logout` | POST | Yes (accessToken) | Revoke refresh token |
-
-| `GET /auth/me` | GET | Yes (accessToken) | Get current user profile |
-
-| `PATCH /auth/change-password` | PATCH | Yes (accessToken) | Change password |
-
-### Users Folder
-
-| Endpoint | Method | Auth Required | Description |
-
-|---|---|---|---|
-
-| `GET /users/me` | GET | Yes (accessToken) | Get current user profile |
-
-| `PATCH /users/me` | PATCH | Yes (accessToken) | Update profile (name/avatar) |
-
-| `GET /admin/users` | GET | Yes (adminToken) | List all users (paginated, filterable) |
-
-| `GET /admin/users/search` | GET | Yes (adminToken) | Search users by name/email |
-
-| `PATCH /admin/users/:id/status` | PATCH | Yes (adminToken) | Toggle user active/deleted status |
-
-| `PATCH /admin/users/:id/role` | PATCH | Yes (adminToken) | Update user role (CANDIDATE↔RECRUITER) |
-
-### Problems Folder
-
-| Endpoint | Method | Auth Required | Description |
-
-|---|---|---|---|
-
-| `POST /problems` | POST | Yes (recruiterToken) | Create new problem (MCQ/CODE) |
-
-| `GET /problems` | GET | Yes | List problems (filtered by type/difficulty/search) |
-
-| `GET /problems/search` | GET | Yes | Search problems by query |
-
-| `GET /problems/:id` | GET | Yes | Get problem by ID |
-
-| `PATCH /problems/:id` | PATCH | Yes (recruiterToken) | Update problem |
-
-| `DELETE /problems/:id` | DELETE | Yes (recruiterToken) | Soft delete problem |
-
-### Assessments Folder
-
-| Endpoint | Method | Auth Required | Description |
-
-|---|---|---|---|
-
-| `POST /assessments` | POST | Yes (recruiterToken) | Create new assessment |
-
-| `GET /assessments` | GET | Yes (candidateToken) | List assessments (candidates see only PUBLISHED) |
-
-| `GET /assessments/:id` | GET | Yes (candidateToken) | Get assessment by ID |
-
-| `POST /assessments/:assessmentId/start` | POST | Yes (candidateToken) | Start attempt (requires invitation + payment) |
-
-| `PATCH /assessments/:id` | PATCH | Yes (adminToken) | Update assessment status/fields |
-
-| `DELETE /assessments/:id` | DELETE | Yes (adminToken) | Soft delete assessment |
-
-| `POST /assessments/:id/problems` | POST | Yes (recruiterToken) | Attach problems to assessment |
-
-### Invitations Folder
-
-| Endpoint | Method | Auth Required | Description |
-
-|---|---|---|---|
-
-| `POST /invitations` | POST | Yes (recruiterToken) | Send invitation by candidate email |
-
-| `GET /invitations` | GET | Yes (candidateToken) | List candidate's own invitations |
-
-| | GET | Yes (recruiterToken) | List invitations sent by recruiter/admin |
-
-| `PATCH /invitations/:id/accept` | PATCH | Yes (candidateToken) | Accept invitation |
-
-| `PATCH /invitations/:id/reject` | PATCH | Yes (candidateToken) | Reject invitation |
-
-### Attempts Folder
-
-| Endpoint | Method | Auth Required | Description |
-
-|---|---|---|---|
-
-| `POST /assessments/:assessmentId/start` | POST | Yes (candidateToken) | Start attempt (requires invitation + payment) |
-
-| `GET /attempts/:id` | GET | Yes (candidateToken) | Get attempt by ID |
-
-| `PATCH /attempts/:id/submit` | PATCH | Yes (candidateToken) | Submit attempt + compute result |
-
-| `GET /attempts/:attemptId/submissions` | GET | Yes (candidateToken) | List submissions for attempt |
-
-| `POST /attempts/:attemptId/submissions` | POST | Yes (candidateToken) | Submit answer for a problem |
-
-### Submissions Folder
-
-| Endpoint | Method | Auth Required | Description |
-
-|---|---|---|---|
-
-| `GET /submissions/:id` | GET | Depends on role | View submission detail (candidate sees sanitized, recruiter/admin full) |
-
-### Evaluation Folder
-
-| Endpoint | Method | Auth Required | Description |
-
-|---|---|---|---|
-
-| `GET /evaluation/results/me` | GET | Yes (candidateToken) | View candidate's own results (paginated) |
-
-| `GET /evaluation/submissions/pending` | GET | Yes (recruiterToken) | List submissions pending manual evaluation |
-
-| `PATCH /evaluation/submissions/:id/evaluate` | PATCH | Yes (recruiterToken) | Manually evaluate a submission |
-
-| `GET /evaluation/assessments/:id/results` | GET | Yes (recruiterToken) | Assessment results statistics |
-
-| `GET /evaluation/assessments/:id/report` | GET | Yes (adminToken) | Full assessment report |
-
-### Payments Folder
-
-| Endpoint | Method | Auth Required | Description |
-
-|---|---|---|---|
-
-| `POST /payments/create` | POST | Yes (recruiterToken) | Create Stripe Checkout Session |
-
-| `POST /payments/webhook` | POST | No (Stripe) | Stripe webhook endpoint (raw body) |
-
-| `GET /payments/:id` | GET | Yes (recruiterToken) | Get payment by ID |
-
-| `GET /payments/my-payments` | GET | Yes (recruiterToken) | List current user's payments |
-
-### Error Responses Folder
-
-| Status | Description |
-
-|---|---|
-
-| `401 Unauthorized` | Missing/invalid token, expired token, account deactivated |
-
-| `403 Forbidden` | Cross-role access, foreign assessment/recruiter/submission |
-
-| `404 Not Found` | Resource not found, uninvited candidate, invalid ID |
+> ⚠️ These credentials are intended for development/testing purposes only.
 
 ---
 
-## 💳 Payment Testing Flow
+# 🔐 Authentication
 
-### Test Mode Setup
+The API uses **JWT-based authentication** with access and refresh tokens.
 
-1. Use Stripe test mode (default) - no real money moves
+## Login Flow
 
-2. Test card numbers work in test mode:
+### 1. Login
 
-   - `4242 4242 4242 4242` - successful payment
+```http
+POST /auth/login
+```
 
-   - `4000 0025 0000 3155` - declined payment
+Example:
 
-### Flow Steps
+```json
+{
+  "email": "admin@assessment.com",
+  "password": "Admin@1234"
+}
+```
 
-1. **Recruiter creates assessment with price > 0** (e.g., 999 cents = $9.99)
+Successful response:
 
-2. **Candidate attempts to start** → receives `402 Payment Required` if no payment
+```json
+{
+  "accessToken": "...",
+  "refreshToken": "...",
+  "user": {}
+}
+```
 
-3. **Recruiter creates checkout session**:
+Repeat the login process for recruiter and candidate accounts.
 
-   - `POST /api/v1/payments/create`
+---
 
-   - Body: `{ "assessmentId": "...", "amountInCents": 999 }`
+## 2. Set Authorization
 
-   - Response: Stripe Checkout Session URL + payment record (status: PENDING)
+Protected endpoints require:
 
-4. **Candidate clicks the checkout URL** → Stripe Checkout Portal
+```http
+Authorization: Bearer <access-token>
+```
 
-5. **Pay with test card `4242 4242 4242 4242`** → Stripe redirects to success_url
+In Postman, role-specific requests use:
 
-6. **Stripe webhook fires** → `POST /api/v1/payments/webhook` (automatically in collection)
+```text
+{{adminToken}}
+{{recruiterToken}}
+{{candidateToken}}
+```
 
-7. **Payment status updates to PAID** in database
+depending on the endpoint.
 
-8. **Candidate can now start the assessment** → `POST /api/v1/assessments/:assessmentId/start` succeeds
+---
 
-### Webhook Testing via Stripe CLI
+## 3. Refresh Token
+
+```http
+POST /auth/refresh-token
+```
+
+Use the current refresh token to obtain a new access token.
+
+---
+
+# 📚 API Reference
+
+## 🔐 1. Authentication
+
+| Method | Endpoint                | Auth          | Description                 |
+| ------ | ----------------------- | ------------- | --------------------------- |
+| POST   | `/auth/register`        | ❌             | Register a new user         |
+| POST   | `/auth/login`           | ❌             | Login and obtain JWT tokens |
+| POST   | `/auth/google`          | ❌             | Google OAuth authentication |
+| POST   | `/auth/refresh-token`   | Refresh Token | Rotate access token         |
+| POST   | `/auth/logout`          | Access Token  | Revoke refresh token        |
+| GET    | `/auth/me`              | Access Token  | Get current user            |
+| PATCH  | `/auth/change-password` | Access Token  | Change password             |
+
+---
+
+## 👥 2. Users
+
+| Method | Endpoint                  | Auth  | Description                          |
+| ------ | ------------------------- | ----- | ------------------------------------ |
+| GET    | `/users/me`               | User  | Get current profile                  |
+| PATCH  | `/users/me`               | User  | Update name/avatar                   |
+| GET    | `/admin/users`            | Admin | List users with pagination/filtering |
+| GET    | `/admin/users/search`     | Admin | Search users by name/email           |
+| PATCH  | `/admin/users/:id/status` | Admin | Change user active/deleted status    |
+| PATCH  | `/admin/users/:id/role`   | Admin | Change Candidate ↔ Recruiter role    |
+
+---
+
+## 🧩 3. Problems
+
+The problem bank supports both **MCQ** and **coding problems**.
+
+| Method | Endpoint           | Auth          | Description             |
+| ------ | ------------------ | ------------- | ----------------------- |
+| POST   | `/problems`        | Recruiter     | Create MCQ/CODE problem |
+| GET    | `/problems`        | Authenticated | List/filter problems    |
+| GET    | `/problems/search` | Authenticated | Search problems         |
+| GET    | `/problems/:id`    | Authenticated | Get problem details     |
+| PATCH  | `/problems/:id`    | Recruiter     | Update problem          |
+| DELETE | `/problems/:id`    | Recruiter     | Soft-delete problem     |
+
+Supported filtering includes:
+
+* Problem type
+* Difficulty
+* Search query
+* Pagination
+* Sorting
+
+---
+
+## 📝 4. Assessments
+
+| Method | Endpoint                           | Auth      | Description                |
+| ------ | ---------------------------------- | --------- | -------------------------- |
+| POST   | `/assessments`                     | Recruiter | Create assessment          |
+| GET    | `/assessments`                     | Candidate | List published assessments |
+| GET    | `/assessments/:id`                 | Candidate | Get assessment             |
+| POST   | `/assessments/:assessmentId/start` | Candidate | Start assessment           |
+| PATCH  | `/assessments/:id`                 | Admin     | Update assessment          |
+| DELETE | `/assessments/:id`                 | Admin     | Soft-delete assessment     |
+| POST   | `/assessments/:id/problems`        | Recruiter | Attach problems            |
+
+> Candidates only see assessments that are available to them according to the platform's invitation/payment rules.
+
+---
+
+## 📩 5. Invitations
+
+Recruiters can invite candidates to assessments.
+
+| Method | Endpoint                  | Auth            | Description                |
+| ------ | ------------------------- | --------------- | -------------------------- |
+| POST   | `/invitations`            | Recruiter       | Send assessment invitation |
+| GET    | `/invitations`            | Candidate       | View received invitations  |
+| GET    | `/invitations`            | Recruiter/Admin | View sent invitations      |
+| PATCH  | `/invitations/:id/accept` | Candidate       | Accept invitation          |
+| PATCH  | `/invitations/:id/reject` | Candidate       | Reject invitation          |
+
+---
+
+## ⏱️ 6. Attempts
+
+| Method | Endpoint                           | Auth      | Description              |
+| ------ | ---------------------------------- | --------- | ------------------------ |
+| POST   | `/assessments/:assessmentId/start` | Candidate | Start an attempt         |
+| GET    | `/attempts/:id`                    | Candidate | Get attempt details      |
+| PATCH  | `/attempts/:id/submit`             | Candidate | Submit attempt           |
+| GET    | `/attempts/:attemptId/submissions` | Candidate | List attempt submissions |
+| POST   | `/attempts/:attemptId/submissions` | Candidate | Submit answer            |
+
+The attempt submission process automatically calculates the applicable result based on the implemented evaluation rules.
+
+---
+
+## 📤 7. Submissions
+
+| Method | Endpoint           | Auth       | Description             |
+| ------ | ------------------ | ---------- | ----------------------- |
+| GET    | `/submissions/:id` | Role-based | View submission details |
+
+Access depends on the user's role:
+
+* **Candidate** → Sanitized submission information
+* **Recruiter/Admin** → Full submission information where authorized
+
+---
+
+## 🧑‍💻 8. Evaluation
+
+| Method | Endpoint                               | Auth      | Description                     |
+| ------ | -------------------------------------- | --------- | ------------------------------- |
+| GET    | `/evaluation/results/me`               | Candidate | View personal results           |
+| GET    | `/evaluation/submissions/pending`      | Recruiter | View pending manual evaluations |
+| PATCH  | `/evaluation/submissions/:id/evaluate` | Recruiter | Manually evaluate submission    |
+| GET    | `/evaluation/assessments/:id/results`  | Recruiter | Assessment statistics           |
+| GET    | `/evaluation/assessments/:id/report`   | Admin     | Generate full assessment report |
+
+---
+
+# 💳 9. Payments
+
+The platform integrates with **Stripe Checkout** for paid assessments.
+
+| Method | Endpoint                | Auth          | Description                    |
+| ------ | ----------------------- | ------------- | ------------------------------ |
+| POST   | `/payments/create`      | Recruiter     | Create Stripe Checkout Session |
+| POST   | `/payments/webhook`     | Stripe        | Process Stripe webhook events  |
+| GET    | `/payments/:id`         | Recruiter     | Get payment details            |
+| GET    | `/payments/my-payments` | Authenticated | Get user's payment history     |
+
+> The webhook endpoint does **not** use JWT authentication because requests originate from Stripe.
+
+---
+
+# 💰 Stripe Payment Flow
+
+The payment flow works as follows:
+
+```text
+Recruiter
+    │
+    ▼
+Create Paid Assessment
+    │
+    ▼
+Candidate Attempts to Start
+    │
+    ▼
+Payment Required (402)
+    │
+    ▼
+Create Stripe Checkout Session
+    │
+    ▼
+Stripe Checkout
+    │
+    ▼
+Test Payment
+    │
+    ▼
+Stripe Webhook
+    │
+    ▼
+Payment → PAID
+    │
+    ▼
+Candidate Starts Assessment
+```
+
+---
+
+## 🧪 Stripe Test Mode
+
+Use **Stripe Test Mode** during development.
+
+### Successful Payment
+
+```text
+4242 4242 4242 4242
+```
+
+### Declined Payment
+
+```text
+4000 0025 0000 3155
+```
+
+Use any future expiration date and any valid test CVC/ZIP when required by Stripe Checkout.
+
+---
+
+# 💳 Payment Testing Workflow
+
+### Step 1 — Create a Paid Assessment
+
+A recruiter creates an assessment with a non-zero price.
+
+Example:
+
+```json
+{
+  "assessmentId": "...",
+  "amountInCents": 999
+}
+```
+
+`999` cents = `$9.99`.
+
+---
+
+### Step 2 — Candidate Attempts to Start
+
+```http
+POST /assessments/:assessmentId/start
+```
+
+If payment is required but has not been completed, the API returns:
+
+```http
+402 Payment Required
+```
+
+---
+
+### Step 3 — Create Checkout Session
+
+```http
+POST /payments/create
+```
+
+Example:
+
+```json
+{
+  "assessmentId": "...",
+  "amountInCents": 999
+}
+```
+
+The API returns a Stripe Checkout URL and payment information.
+
+---
+
+### Step 4 — Complete Payment
+
+Open the returned Checkout URL and use:
+
+```text
+4242 4242 4242 4242
+```
+
+---
+
+### Step 5 — Stripe Webhook
+
+Stripe sends the payment event to:
+
+```http
+POST /payments/webhook
+```
+
+The backend processes the event and updates the payment status.
+
+---
+
+### Step 6 — Payment Becomes PAID
+
+The payment record is updated:
+
+```text
+PENDING → PAID
+```
+
+---
+
+### Step 7 — Start Assessment
+
+The candidate can now call:
+
+```http
+POST /assessments/:assessmentId/start
+```
+
+and proceed with the assessment.
+
+---
+
+# 🔔 Stripe Webhook — Local Development
+
+For local webhook testing, Stripe CLI can forward events to the backend.
 
 ```bash
-
-# Install: brew install stripe/stripe-cli/stripe
-
 stripe listen --forward-to localhost:5000/api/v1/payments/webhook
+```
 
-# Or use the raw webhook endpoint in Postman
+The Stripe CLI will provide a webhook signing secret for local development.
 
-# Send the event body + signature to the webhook URL
+> Production webhook events should be configured in the Stripe Dashboard using the deployed API endpoint.
 
+---
+
+# 🔒 Authorization & RBAC
+
+The API implements role-based access control for:
+
+```text
+ADMIN
+RECRUITER
+CANDIDATE
+```
+
+### RBAC Examples
+
+| Endpoint                                     | Required Role  | Unauthorized Role      |
+| -------------------------------------------- | -------------- | ---------------------- |
+| `GET /admin/*`                               | ADMIN          | 403                    |
+| `POST /assessments/:id/start`                | CANDIDATE      | 403                    |
+| `POST /invitations`                          | RECRUITER      | 403                    |
+| `PATCH /invitations/:id/accept`              | CANDIDATE      | 403                    |
+| `GET /evaluation/submissions/pending`        | RECRUITER      | 403                    |
+| `PATCH /evaluation/submissions/:id/evaluate` | RECRUITER      | 403                    |
+| `GET /evaluation/assessments/:id/report`     | ADMIN          | 403                    |
+| `/payments/*`                                | Role-dependent | 403 where unauthorized |
+
+---
+
+# ⚠️ Error Handling
+
+The API provides structured error responses for common failure scenarios.
+
+| Status | Meaning                            |
+| ------ | ---------------------------------- |
+| `400`  | Invalid request / validation error |
+| `401`  | Missing or invalid authentication  |
+| `402`  | Payment required                   |
+| `403`  | Insufficient permissions           |
+| `404`  | Resource not found                 |
+| `409`  | Resource conflict                  |
+| `500`  | Internal server error              |
+
+### Common `401` Cases
+
+* Missing token
+* Invalid token
+* Expired token
+* Deactivated account
+
+### Common `403` Cases
+
+* Wrong user role
+* Accessing another user's resource
+* Unauthorized recruiter/assessment access
+* Unauthorized submission access
+
+### Common `404` Cases
+
+* Invalid resource ID
+* Resource does not exist
+* Candidate not invited to assessment
+
+---
+
+# 📥 Import Postman Collection
+
+### Step 1
+
+Download:
+
+```text
+POSTMAN.json
+```
+
+from the repository.
+
+### Step 2
+
+Open **Postman**.
+
+### Step 3
+
+Click:
+
+```text
+Import
+```
+
+### Step 4
+
+Select:
+
+```text
+POSTMAN.json
+```
+
+### Step 5
+
+Create/select the environment:
+
+```text
+DeveloperAssessment
+```
+
+### Step 6
+
+Configure the environment variables.
+
+### Step 7
+
+Login using one of the demo accounts and save the returned tokens.
+
+### Step 8
+
+Start testing the API workflow.
+
+---
+
+# 🔄 Recommended Testing Order
+
+For a complete end-to-end test, follow this sequence:
+
+```text
+1. Register / Login
+        ↓
+2. Obtain JWT Tokens
+        ↓
+3. Create Problems
+        ↓
+4. Create Assessment
+        ↓
+5. Attach Problems
+        ↓
+6. Publish Assessment
+        ↓
+7. Invite Candidate
+        ↓
+8. Candidate Accepts Invitation
+        ↓
+9. Create Payment / Checkout
+        ↓
+10. Complete Stripe Payment
+        ↓
+11. Stripe Webhook
+        ↓
+12. Start Assessment
+        ↓
+13. Submit Answers
+        ↓
+14. Submit Attempt
+        ↓
+15. Manual Evaluation (if required)
+        ↓
+16. View Results
+        ↓
+17. Generate Assessment Report
 ```
 
 ---
 
-## 🚫 Authorization Enforcement Rules
+# 🛠️ Local Development
 
-The collection enforces these RBAC rules automatically:
+## Prerequisites
 
-| Endpoint | Required Role | What Happens If Wrong Role |
+Make sure the following are installed:
 
-|---|---|---|
-
-| `GET /admin/*` | `ADMIN` | `403 Forbidden` for candidate/recruiter |
-
-| `POST /assessments/:assessmentId/start` | `CANDIDATE` | `403` for recruiter/admin |
-
-| `POST /invitations` | `RECRUITER` | `403` for candidate |
-
-| `PATCH /invitations/:id/accept` | `CANDIDATE` | `403` for recruiter/admin |
-
-| `GET /evaluation/submissions/pending` | `RECRUITER` | `403` for candidate |
-
-| `PATCH /evaluation/submissions/:id/evaluate` | `RECRUITER` | `403` for candidate |
-
-| `GET /evaluation/assessments/:id/report` | `ADMIN` | `403` for recruiter/candidate |
-
-| `GET /payments/*` | `RECRUITER` | `403` for candidate (sees only own) |
+* Node.js
+* npm
+* PostgreSQL
+* Stripe CLI *(for local webhook testing)*
+* Postman
 
 ---
 
-## 📥 How to Import
+## Install Dependencies
 
-1. **Download** `POSTMAN.json` from this repository
-
-2. **Open Postman** → Click **Import** (top left)
-
-3. **Select** the `POSTMAN.json` file
-
-4. **Choose** the collection and click **Import**
-
-5. **Configure** the environment variables as described above
-
-6. **Start testing!** Use the demo credentials to get tokens
-
----
-
-## 📊 Collection Summary
-
-- **50+ APIs** across 10 folders
-
-- **Full RBAC enforcement** (candidate/recruiter/admin)
-
-- **Stripe payment integration** with webhook
-
-- **Complete error handling** (401/403/404/409)
-
-- **Pagination, filtering, sorting** on all list endpoints
-
-- **Real business logic** (not mock/fake endpoints)
-
-- **All endpoints exist** in the running backend
-
----
-
-## 🛠️ Development Notes
-
-### Running the Server
+From the backend directory:
 
 ```bash
-
-# From backend directory
-
 cd Backend
-
-npm install        # Install dependencies
-
-npm run build      # Compile TypeScript
-
-npm start          # Start server (http://localhost:5000)
-
+npm install
 ```
-
-### Seed Data
-
-```bash
-
-npm run seed       # Run prisma seed with demo users/data
-
-```
-
-### Test Tokens
-
-After seeding, login via the auth endpoints to get tokens, then set them in your Postman environment.
 
 ---
 
-*This collection documents the actual backend APIs at `https://developerassessmentbackend.vercel.app/api/v1`. All endpoints have been implemented with full business logic, RBAC, Zod validation, and proper error handling as part of Phases 3B-8.*
+## Build Project
+
+```bash
+npm run build
+```
+
+---
+
+## Start Server
+
+```bash
+npm start
+```
+
+The local API will be available at:
+
+```text
+http://localhost:5000
+```
+
+Therefore the local API base URL is:
+
+```text
+http://localhost:5000/api/v1
+```
+
+---
+
+# 🌱 Seed Database
+
+To populate the database with development/test data:
+
+```bash
+npm run seed
+```
+
+This creates the demo users and required sample data.
+
+After seeding, use the demo login credentials to obtain JWT tokens.
+
+---
+
+# 🧱 API Architecture
+
+The platform is built around several major modules:
+
+```text
+Authentication
+     │
+     ├── JWT
+     ├── Refresh Tokens
+     └── Google OAuth
+     
+Users
+     │
+     ├── Admin
+     ├── Recruiter
+     └── Candidate
+
+Assessment System
+     │
+     ├── Problems
+     ├── Assessments
+     ├── Invitations
+     ├── Attempts
+     └── Submissions
+
+Evaluation
+     │
+     ├── Automatic Evaluation
+     ├── Manual Evaluation
+     ├── Results
+     └── Reports
+
+Payments
+     │
+     ├── Stripe Checkout
+     ├── Webhooks
+     └── Payment History
+```
+
+---
+
+# ✨ Key Features
+
+### 🔐 Secure Authentication
+
+* JWT access tokens
+* Refresh token rotation
+* Google authentication
+* Password management
+* Logout/token revocation
+
+### 👥 Role-Based Access Control
+
+* Admin
+* Recruiter
+* Candidate
+* Protected role-specific routes
+
+### 🧩 Problem Management
+
+* MCQ problems
+* Coding problems
+* Difficulty levels
+* Search and filtering
+* Soft deletion
+
+### 📝 Assessment Management
+
+* Assessment creation
+* Problem attachment
+* Publishing workflow
+* Candidate attempts
+* Invitation-based access
+* Paid assessments
+
+### 📊 Evaluation
+
+* Automatic result calculation
+* Manual submission evaluation
+* Candidate result history
+* Assessment statistics
+* Administrative reports
+
+### 💳 Payments
+
+* Stripe Checkout
+* Payment records
+* Webhook verification/processing
+* Payment status management
+* Payment history
+
+### ⚙️ API Quality
+
+* Zod request validation
+* Consistent error handling
+* Pagination
+* Filtering
+* Sorting
+* RBAC enforcement
+* Meaningful HTTP status codes
+
+---
+
+# 📊 Collection Summary
+
+| Metric           | Details                       |
+| ---------------- | ----------------------------- |
+| API Endpoints    | **50+**                       |
+| API Modules      | **10**                        |
+| Authentication   | JWT + Google OAuth            |
+| Roles            | Admin / Recruiter / Candidate |
+| Assessment Types | MCQ / Coding                  |
+| Payment Provider | Stripe                        |
+| Validation       | Zod                           |
+| Database         | PostgreSQL                    |
+| API Style        | REST                          |
+| Deployment       | Vercel                        |
+| Testing          | Postman                       |
+
+---
+
+# 🌐 Production API
+
+**Live Backend:**
+
+```text
+https://developerassessmentbackend.vercel.app/api/v1
+```
+
+The production backend contains the implemented API modules and business logic documented above.
+
+---
+
+## 📌 Notes
+
+* Use **Stripe Test Mode** for payment testing.
+* Never expose production secrets or JWT tokens publicly.
+* The demo credentials are intended only for development/testing.
+* Protected endpoints require an appropriate JWT access token.
+* Role restrictions are enforced server-side.
+* Stripe webhook requests are handled separately from normal JWT-authenticated requests.
+
+---
+
+# 🚀 Developer Assessment Platform
+
+A full-featured backend platform designed to manage the complete developer assessment lifecycle:
+
+```text
+Recruiter
+   ↓
+Create Problems
+   ↓
+Create Assessment
+   ↓
+Invite Candidate
+   ↓
+Candidate Accepts
+   ↓
+Payment
+   ↓
+Assessment Attempt
+   ↓
+Submission
+   ↓
+Evaluation
+   ↓
+Results
+   ↓
+Assessment Report
+```
+
+**50+ REST APIs • JWT Authentication • RBAC • Assessments • Evaluation • Stripe Payments • Production Deployment**
