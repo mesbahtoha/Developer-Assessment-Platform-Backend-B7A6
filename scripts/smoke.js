@@ -465,12 +465,35 @@ async function main() {
       myResultsRes.json?.data?.meta?.limit === 10,
     `status=${myResultsRes.status}`
   );
+  // Fresh databases may have no results for the demo candidate yet, so fall
+  // back to the seeded candidate (Jane), whose seed guarantees an evaluated,
+  // published result. Detail checks run with whichever owner actually has rows.
   const publishedSeeds = (myResultsRes.json?.data?.results ?? []).filter((r) => r.isPublished === true);
-  const detailSource = publishedSeeds[0] ?? myResultsRes.json?.data?.results?.[0];
-  check('candidate has at least one result row (seeded demo attempt)', Boolean(detailSource), `total=${myResultsRes.json?.data?.meta?.total}`);
+  const candidateSource = publishedSeeds[0] ?? myResultsRes.json?.data?.results?.[0];
+
+  const janeLoginEarly = await api('POST', '/auth/login', {
+    body: { email: 'jane.candidate@assessment.com', password: 'Jane@1234' },
+  });
+  const janeToken = janeLoginEarly.json?.data?.accessToken;
+
+  let detailSource = candidateSource ?? null;
+  let ownerToken = tokens.candidate;
+  if (!detailSource && janeToken) {
+    const janeListEarly = await api('GET', '/results/me?page=1&limit=10', { token: janeToken });
+    const janeSource = (janeListEarly.json?.data?.results ?? [])[0];
+    if (janeSource) {
+      detailSource = janeSource;
+      ownerToken = janeToken;
+    }
+  }
+  check(
+    'seeded result rows exist for detail/lifecycle checks (demo or seeded candidate)',
+    Boolean(detailSource),
+    `candidateTotal=${myResultsRes.json?.data?.meta?.total}`
+  );
 
   if (detailSource) {
-    const detail = await api('GET', `/results/${detailSource.id}`, { token: tokens.candidate });
+    const detail = await api('GET', `/results/${detailSource.id}`, { token: ownerToken });
     check(
       'candidate reads own result detail with per-problem breakdown',
       detail.status === 200 && Array.isArray(detail.json?.data?.breakdown) && detail.json?.data?.breakdown?.length > 0,
@@ -480,26 +503,31 @@ async function main() {
     const noAnswersLeak = !JSON.stringify(detail.json?.data ?? {}).includes('"correctAnswer"');
     check('result detail never leaks problem answer keys', noAnswersLeak);
 
-    // Ownership + publish lifecycle: use the second seeded candidate (Jane).
+    // Ownership + publish lifecycle with the second seeded candidate (Jane).
     // Her seed guarantees a fully EVALUATED attempt with a published result.
-    const janeLogin = await api('POST', '/auth/login', {
-      body: { email: 'jane.candidate@assessment.com', password: 'Jane@1234' },
-    });
-    const janeToken = janeLogin.json?.data?.accessToken;
     if (janeToken) {
-      const foreignRead = await api('GET', `/results/${detailSource.id}`, { token: janeToken });
+      // No existence leak: the OTHER candidate gets 404 on this result
+      const otherToken = ownerToken === tokens.candidate ? janeToken : tokens.candidate;
+      const foreignRead = await api('GET', `/results/${detailSource.id}`, { token: otherToken });
       check('another candidate reading a foreign result -> 404', foreignRead.status === 404, `status=${foreignRead.status}`);
 
-      const janeList = await api('GET', '/results/me?page=1&limit=10', { token: janeToken });
+      const otherList = await api('GET', '/results/me?page=1&limit=10', { token: otherToken });
       check(
         'second candidate sees only their own results (isolation)',
-        janeList.status === 200 &&
-          (janeList.json?.data?.meta?.total ?? 0) >= 1 &&
-          !(janeList.json?.data?.results ?? []).some((r) => r.id === detailSource.id),
-        `total=${janeList.json?.data?.meta?.total}`
+        otherList.status === 200 &&
+          !(otherList.json?.data?.results ?? []).some((r) => r.id === detailSource.id),
+        `total=${otherList.json?.data?.meta?.total}`
       );
 
-      const janeResult = (janeList.json?.data?.results ?? []).find((r) => r.isPublished === true);
+      // Pick a published result owned by Jane for the lifecycle checks
+      let janePublished = null;
+      if (ownerToken === janeToken) {
+        janePublished = detailSource.isPublished ? detailSource : null;
+      } else {
+        const janeListNow = await api('GET', '/results/me?page=1&limit=10', { token: janeToken });
+        janePublished = (janeListNow.json?.data?.results ?? []).find((r) => r.isPublished === true);
+      }
+      const janeResult = janePublished;
       if (janeResult) {
         const publishFirst = await api('PATCH', `/results/${janeResult.id}/publish`, { token: tokens.recruiter });
         check(
@@ -524,15 +552,15 @@ async function main() {
         warn('publish lifecycle skipped (no published result found for the seeded candidate)');
       }
     } else {
-      warn(`results ownership checks skipped (second candidate login failed: ${janeLogin.status})`);
+      warn('results ownership checks skipped (second candidate login failed)');
     }
 
-    // Candidates cannot publish -> 403 (role guard)
-    const candidatePublish = await api('PATCH', `/results/${detailSource.id}/publish`, { token: tokens.candidate });
+    // Publish guards against the result owner (role guard applies to every candidate)
+    const candidatePublish = await api('PATCH', `/results/${detailSource.id}/publish`, { token: ownerToken });
     check('candidate cannot publish a result -> 403', candidatePublish.status === 403, `status=${candidatePublish.status}`);
 
     // Summary + assessment results + leaderboard
-    const summaryRes = await api('GET', '/results/me/summary', { token: tokens.candidate });
+    const summaryRes = await api('GET', '/results/me/summary', { token: ownerToken });
     check(
       'candidate results summary returns aggregates',
       summaryRes.status === 200 &&
@@ -540,7 +568,7 @@ async function main() {
         typeof summaryRes.json?.data?.averagePercentage === 'number',
       JSON.stringify(summaryRes.json?.data)
     );
-    const summaryAgain = await api('GET', '/results/me/summary', { token: tokens.candidate });
+    const summaryAgain = await api('GET', '/results/me/summary', { token: ownerToken });
     check('results summary served consistently (cache-aware)', JSON.stringify(summaryRes.json?.data) === JSON.stringify(summaryAgain.json?.data));
 
     const assessmentResultsRes = await api('GET', `/results/assessment/${assessmentId}?page=1&limit=10&sortBy=percentage`, { token: tokens.recruiter });
@@ -551,7 +579,7 @@ async function main() {
     );
     const searchRes = await api('GET', `/results/assessment/${assessmentId}?search=${encodeURIComponent(CREDENTIALS.candidate.email || 'smoke')}`, { token: tokens.recruiter });
     check('assessment results support candidate search', searchRes.status === 200);
-    const foreignResults = await api('GET', `/results/assessment/${assessmentId}`, { token: tokens.candidate });
+    const foreignResults = await api('GET', `/results/assessment/${assessmentId}`, { token: ownerToken });
     check('candidate cannot list another candidate assessment results -> 403', foreignResults.status === 403, `status=${foreignResults.status}`);
 
     const leaderboardRes = await api('GET', `/results/assessment/${assessmentId}/leaderboard?limit=5`, { token: tokens.recruiter });
@@ -568,9 +596,9 @@ async function main() {
     // Validation guards
     const badLeaderboard = await api('GET', `/results/assessment/${assessmentId}/leaderboard?limit=nope`, { token: tokens.recruiter });
     check('leaderboard invalid limit -> 400 validation error', badLeaderboard.status === 400 && errEnvelope(badLeaderboard.json));
-    const badResultId = await api('GET', '/results/not-a-uuid', { token: tokens.candidate });
+    const badResultId = await api('GET', '/results/not-a-uuid', { token: ownerToken });
     check('invalid result id -> 400 validation error', badResultId.status === 400 && errEnvelope(badResultId.json));
-    const missingResult = await api('GET', '/results/11111111-1111-1111-1111-111111111111', { token: tokens.candidate });
+    const missingResult = await api('GET', '/results/11111111-1111-1111-1111-111111111111', { token: ownerToken });
     check('unknown result id -> 404', missingResult.status === 404, `status=${missingResult.status}`);
 
 
