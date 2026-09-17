@@ -170,7 +170,7 @@ Prisma Client  ──▶  PostgreSQL
 
 ## 🌍 API Endpoint List
 
-Base URL: `/api/v1` — **55 endpoints** total.
+Base URL: `/api/v1` — **62 endpoints** total.
 
 ### Authentication (7)
 | Method | Endpoint | Access | Description |
@@ -232,14 +232,25 @@ Base URL: `/api/v1` — **55 endpoints** total.
 | PATCH | `/attempts/:id/submit` | CANDIDATE | Finalize attempt (auto-evaluates MCQs) |
 | GET | `/submissions/:id` | Authenticated | Single submission (ownership-checked) |
 
-### Evaluation & Results (5)
+### Evaluation (4)
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/evaluations/results/me` | CANDIDATE | Own results with filters |
-| GET | `/evaluations/submissions/pending` | RECRUITER/ADMIN | Queue of submissions to review |
-| PATCH | `/evaluations/submissions/:id/evaluate` | RECRUITER/ADMIN | Score a submission + feedback |
-| GET | `/evaluations/assessments/:id/results` | RECRUITER/ADMIN | All results for an assessment |
-| GET | `/evaluations/assessments/:id/report` | RECRUITER/ADMIN | Aggregated assessment report (cached) |
+| GET | `/evaluation/submissions/pending` | RECRUITER/ADMIN | Queue of submissions to review |
+| PATCH | `/evaluation/submissions/:id/evaluate` | RECRUITER/ADMIN | Score a submission + feedback |
+| GET | `/evaluation/assessments/:id/results` | RECRUITER/ADMIN | All results for an assessment |
+| GET | `/evaluation/assessments/:id/report` | RECRUITER/ADMIN | Aggregated assessment report (cached) |
+
+### Results (7)
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/results/me` | CANDIDATE | Own results (`?assessmentId&isPassed&sortBy&sortOrder&page&limit`) |
+| GET | `/results/me/summary` | CANDIDATE | Career aggregates: total/passed/failed, average & best % (cached) |
+| GET | `/results/:id` | Authenticated | Result detail + per-problem breakdown (ownership-checked) |
+| PATCH | `/results/:id/publish` | RECRUITER/ADMIN | Officially release a result (audited, idempotent) |
+| PATCH | `/results/:id/unpublish` | RECRUITER/ADMIN | Retract a published result (audited, idempotent) |
+| GET | `/results/assessment/:assessmentId` | RECRUITER/ADMIN | Assessment results with candidate search (`?isPassed&search`) |
+| GET | `/results/assessment/:assessmentId/leaderboard` | RECRUITER/ADMIN | Ranked top-N candidates (Redis-cached) |
+
 
 ### Payments (6) — Stripe
 | Method | Endpoint | Access | Description |
@@ -358,7 +369,8 @@ Advanced fetching is implemented across the list endpoints:
 | `GET /problems` | `?page&limit&type&difficulty&tags` + `GET /problems/search?q=` search on title/prompt |
 | `GET /invitations` | `?status&page&limit` — auto-scoped to sent (recruiter) vs received (candidate) |
 | `GET /attempts/my-attempts` | `?status&page&limit` |
-| `GET /evaluations/results/me` | `?assessmentId&page&limit` |
+| `GET /results/me` | `?assessmentId&isPassed&sortBy&sortOrder&page&limit` |
+| `GET /results/assessment/:assessmentId` | `?isPassed&search&page&limit` — candidate name/email search |
 | `GET /payments/my-payments` | `?status&page&limit` |
 | `GET /admin/users` | `?role&status&search&page&limit` + `GET /admin/users/search?q=` |
 | `GET /admin/payments` | `?status&userId&page&limit` |
@@ -500,7 +512,7 @@ curl https://<your-project>.vercel.app/api/v1
 
 ## 📮 Postman Documentation
 
-> **Collection import:** [`POSTMAN.json`](./POSTMAN.json) in the repo root — covers all 55 endpoints with role-based folders and example payloads.
+> **Collection import:** [`POSTMAN.json`](./POSTMAN.json) in the repo root — covers all 62 endpoints with role-based folders and example payloads.
 >
 > **Published docs (placeholder):** `https://documenter.getpostman.com/view/<your-collection-id>`
 >

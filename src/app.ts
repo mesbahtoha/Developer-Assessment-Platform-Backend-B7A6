@@ -14,6 +14,7 @@ import { invitationRoutes } from './modules/invitation/invitation.routes';
 import { attemptRoutes } from './modules/attempt/attempt.routes';
 import { submissionRoutes } from './modules/attempt/submission.routes';
 import { evaluationRoutes } from './modules/evaluation/evaluation.routes';
+import { resultRoutes } from './modules/results/results.routes';
 import { paymentRoutes } from './modules/payments/payment.routes';
 import { catchAsync } from './shared/catchAsync';
 import { sendError, sendSuccess } from './shared/ApiResponse';
@@ -118,6 +119,7 @@ app.use('/api/v1/invitations', invitationRoutes);
 app.use('/api/v1/attempts', attemptRoutes);
 app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/v1/evaluation', evaluationRoutes);
+app.use('/api/v1/results', resultRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 
 // 404 + error handling (order matters)

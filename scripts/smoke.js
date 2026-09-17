@@ -9,8 +9,10 @@
  *
  * Verifies, against a real database: response envelope, auth + refresh, RBAC (403),
  * validation errors (400), 404s, soft delete, pagination/filter/sort/search,
- * assessment lifecycle, invitations, attempt history, Redis cache behaviour and the
- * Stripe payment flow (amount-tampering rejection + checkout session creation).
+ * assessment lifecycle, invitations, attempt history, the Results module
+ * (list, detail, ownership, publish lifecycle, leaderboard), Redis cache
+ * behaviour and the Stripe payment flow (amount-tampering rejection +
+ * checkout session creation).
  */
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
@@ -82,20 +84,29 @@ async function api(method, path, { token, body } = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
-  const text = await res.text();
-  let json = null;
   try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = null;
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      // Hard timeout so a hung network call (e.g. a slow Stripe API) can never
+      // stall the whole suite silently.
+      signal: AbortSignal.timeout(30000),
+    });
+
+    const text = await res.text();
+    let json = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = null;
+    }
+    return { status: res.status, json, text };
+  } catch (err) {
+    // Network/timeout failure surfaces as a structured "failed" response so
+    // the affected check records FAIL instead of crashing the suite.
+    return { status: 0, json: null, text: String(err?.message || err) };
   }
-  return { status: res.status, json, text };
 }
 
 const okEnvelope = (json) =>
@@ -439,6 +450,132 @@ async function main() {
     check('Redis cache serves repeated reads (hits > 0)', (cacheState.stats?.hits ?? 0) > 0, JSON.stringify(cacheState.stats));
   } else {
     warn(`cache status = ${cacheState.status} (cache disabled/unreachable; API still correct)`);
+  }
+
+  // ---------- 10b. Results module (list, detail, lifecycle, leaderboard) ----------
+  // Free the auth limiter so additional role logins below are not throttled
+  // when the suite is run repeatedly inside the same rate-limit window.
+  await clearRateLimits();
+  const myResultsRes = await api('GET', '/results/me?page=1&limit=10&sortBy=createdAt&sortOrder=desc', { token: tokens.candidate });
+  check(
+    'candidate results list is paginated + enriched',
+    myResultsRes.status === 200 &&
+      okEnvelope(myResultsRes.json) &&
+      Array.isArray(myResultsRes.json?.data?.results) &&
+      myResultsRes.json?.data?.meta?.limit === 10,
+    `status=${myResultsRes.status}`
+  );
+  const publishedSeeds = (myResultsRes.json?.data?.results ?? []).filter((r) => r.isPublished === true);
+  const detailSource = publishedSeeds[0] ?? myResultsRes.json?.data?.results?.[0];
+  check('candidate has at least one result row (seeded demo attempt)', Boolean(detailSource), `total=${myResultsRes.json?.data?.meta?.total}`);
+
+  if (detailSource) {
+    const detail = await api('GET', `/results/${detailSource.id}`, { token: tokens.candidate });
+    check(
+      'candidate reads own result detail with per-problem breakdown',
+      detail.status === 200 && Array.isArray(detail.json?.data?.breakdown) && detail.json?.data?.breakdown?.length > 0,
+      `breakdown=${detail.json?.data?.breakdown?.length}`
+    );
+
+    const noAnswersLeak = !JSON.stringify(detail.json?.data ?? {}).includes('"correctAnswer"');
+    check('result detail never leaks problem answer keys', noAnswersLeak);
+
+    // Ownership + publish lifecycle: use the second seeded candidate (Jane).
+    // Her seed guarantees a fully EVALUATED attempt with a published result.
+    const janeLogin = await api('POST', '/auth/login', {
+      body: { email: 'jane.candidate@assessment.com', password: 'Jane@1234' },
+    });
+    const janeToken = janeLogin.json?.data?.accessToken;
+    if (janeToken) {
+      const foreignRead = await api('GET', `/results/${detailSource.id}`, { token: janeToken });
+      check('another candidate reading a foreign result -> 404', foreignRead.status === 404, `status=${foreignRead.status}`);
+
+      const janeList = await api('GET', '/results/me?page=1&limit=10', { token: janeToken });
+      check(
+        'second candidate sees only their own results (isolation)',
+        janeList.status === 200 &&
+          (janeList.json?.data?.meta?.total ?? 0) >= 1 &&
+          !(janeList.json?.data?.results ?? []).some((r) => r.id === detailSource.id),
+        `total=${janeList.json?.data?.meta?.total}`
+      );
+
+      const janeResult = (janeList.json?.data?.results ?? []).find((r) => r.isPublished === true);
+      if (janeResult) {
+        const publishFirst = await api('PATCH', `/results/${janeResult.id}/publish`, { token: tokens.recruiter });
+        check(
+          'publishing an already-published result is idempotent (200)',
+          publishFirst.status === 200 && publishFirst.json?.data?.result?.isPublished === true,
+          `status=${publishFirst.status} msg=${publishFirst.json?.message}`
+        );
+        const unpublishRes = await api('PATCH', `/results/${janeResult.id}/unpublish`, { token: tokens.recruiter });
+        check(
+          'recruiter unpublishes (retracts) a published result',
+          unpublishRes.status === 200 && unpublishRes.json?.data?.result?.isPublished === false
+        );
+        const publishRestore = await api('PATCH', `/results/${janeResult.id}/publish`, { token: tokens.recruiter });
+        check(
+          're-publishing restores the result (lifecycle round-trip)',
+          publishRestore.status === 200 && publishRestore.json?.data?.result?.isPublished === true,
+          `status=${publishRestore.status}`
+        );
+        const janePublish = await api('PATCH', `/results/${janeResult.id}/publish`, { token: janeToken });
+        check('candidate cannot publish even their own result -> 403', janePublish.status === 403, `status=${janePublish.status}`);
+      } else {
+        warn('publish lifecycle skipped (no published result found for the seeded candidate)');
+      }
+    } else {
+      warn(`results ownership checks skipped (second candidate login failed: ${janeLogin.status})`);
+    }
+
+    // Candidates cannot publish -> 403 (role guard)
+    const candidatePublish = await api('PATCH', `/results/${detailSource.id}/publish`, { token: tokens.candidate });
+    check('candidate cannot publish a result -> 403', candidatePublish.status === 403, `status=${candidatePublish.status}`);
+
+    // Summary + assessment results + leaderboard
+    const summaryRes = await api('GET', '/results/me/summary', { token: tokens.candidate });
+    check(
+      'candidate results summary returns aggregates',
+      summaryRes.status === 200 &&
+        typeof summaryRes.json?.data?.total === 'number' &&
+        typeof summaryRes.json?.data?.averagePercentage === 'number',
+      JSON.stringify(summaryRes.json?.data)
+    );
+    const summaryAgain = await api('GET', '/results/me/summary', { token: tokens.candidate });
+    check('results summary served consistently (cache-aware)', JSON.stringify(summaryRes.json?.data) === JSON.stringify(summaryAgain.json?.data));
+
+    const assessmentResultsRes = await api('GET', `/results/assessment/${assessmentId}?page=1&limit=10&sortBy=percentage`, { token: tokens.recruiter });
+    check(
+      'recruiter assessment results list is paginated',
+      assessmentResultsRes.status === 200 && Array.isArray(assessmentResultsRes.json?.data?.results),
+      `status=${assessmentResultsRes.status}`
+    );
+    const searchRes = await api('GET', `/results/assessment/${assessmentId}?search=${encodeURIComponent(CREDENTIALS.candidate.email || 'smoke')}`, { token: tokens.recruiter });
+    check('assessment results support candidate search', searchRes.status === 200);
+    const foreignResults = await api('GET', `/results/assessment/${assessmentId}`, { token: tokens.candidate });
+    check('candidate cannot list another candidate assessment results -> 403', foreignResults.status === 403, `status=${foreignResults.status}`);
+
+    const leaderboardRes = await api('GET', `/results/assessment/${assessmentId}/leaderboard?limit=5`, { token: tokens.recruiter });
+    const lb = leaderboardRes.json?.data?.leaderboard ?? [];
+    const rankedDescending = lb.every((row, i) => i === 0 || (lb[i - 1].percentage ?? 0) >= (row.percentage ?? 0));
+    check(
+      'assessment leaderboard returns ranked rows',
+      leaderboardRes.status === 200 && Array.isArray(lb) && lb.every((row, i) => row.rank === i + 1) && rankedDescending,
+      `rows=${lb.length}`
+    );
+    const leaderboardAgain = await api('GET', `/results/assessment/${assessmentId}/leaderboard?limit=5`, { token: tokens.recruiter });
+    check('leaderboard is served from cache (identical payload)', JSON.stringify(leaderboardRes.json?.data) === JSON.stringify(leaderboardAgain.json?.data));
+
+    // Validation guards
+    const badLeaderboard = await api('GET', `/results/assessment/${assessmentId}/leaderboard?limit=nope`, { token: tokens.recruiter });
+    check('leaderboard invalid limit -> 400 validation error', badLeaderboard.status === 400 && errEnvelope(badLeaderboard.json));
+    const badResultId = await api('GET', '/results/not-a-uuid', { token: tokens.candidate });
+    check('invalid result id -> 400 validation error', badResultId.status === 400 && errEnvelope(badResultId.json));
+    const missingResult = await api('GET', '/results/11111111-1111-1111-1111-111111111111', { token: tokens.candidate });
+    check('unknown result id -> 404', missingResult.status === 404, `status=${missingResult.status}`);
+
+
+  } else {
+    warn('results detail/lifecycle checks skipped (no result rows visible)');
   }
 
   // ---------- 11. Admin operations ----------

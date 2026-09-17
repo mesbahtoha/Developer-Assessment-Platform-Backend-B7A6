@@ -1502,6 +1502,242 @@
       ]
     },
     {
+      "name": "Results",
+      "item": [
+        {
+          "name": "Candidate: My Results",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "page",
+                "description": "Page number",
+                "value": "1"
+              },
+              {
+                "key": "limit",
+                "description": "Items per page",
+                "value": "10"
+              },
+              {
+                "key": "assessmentId",
+                "description": "Filter by assessment ID",
+                "value": ""
+              },
+              {
+                "key": "isPassed",
+                "description": "Filter by pass/fail (true/false)",
+                "value": ""
+              },
+              {
+                "key": "sortBy",
+                "description": "score | percentage | createdAt",
+                "value": "createdAt"
+              },
+              {
+                "key": "sortOrder",
+                "description": "asc | desc",
+                "value": "desc"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/results/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "results",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Candidate: My Results Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/results/me/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "results",
+                "me",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Read Result Detail (ownership-checked)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/results/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "results",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recruiter: Publish Result",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/results/:id/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "results",
+                ":id",
+                "publish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recruiter: Unpublish (Retract) Result",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/results/:id/unpublish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "results",
+                ":id",
+                "unpublish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recruiter: Assessment Results",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "isPassed",
+                "description": "Filter by pass/fail (true/false)",
+                "value": ""
+              },
+              {
+                "key": "search",
+                "description": "Search candidate name or email",
+                "value": ""
+              },
+              {
+                "key": "page",
+                "description": "Page number",
+                "value": "1"
+              },
+              {
+                "key": "limit",
+                "description": "Items per page",
+                "value": "10"
+              },
+              {
+                "key": "sortBy",
+                "description": "score | percentage | createdAt",
+                "value": "percentage"
+              },
+              {
+                "key": "sortOrder",
+                "description": "asc | desc",
+                "value": "desc"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/results/assessment/:assessmentId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "results",
+                "assessment",
+                ":assessmentId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recruiter: Assessment Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "query": [
+              {
+                "key": "limit",
+                "description": "Top-N rows (1-50)",
+                "value": "10"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/results/assessment/:assessmentId/leaderboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "results",
+                "assessment",
+                ":assessmentId",
+                "leaderboard"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Payments",
       "item": [
         {
