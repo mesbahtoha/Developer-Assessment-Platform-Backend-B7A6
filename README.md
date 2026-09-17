@@ -170,7 +170,7 @@ Prisma Client  ──▶  PostgreSQL
 
 ## 🌍 API Endpoint List
 
-Base URL: `/api/v1` — **71 requests** in `POSTMAN.json` (13 folders, 15 variables).
+Base URL: `/api/v1` — **70 requests** in `POSTMAN.json` (13 folders, 15 variables).
 
 ### Authentication (9 — 3 role logins share one route)
 | Method | Endpoint | Access | Description |
@@ -512,7 +512,7 @@ curl https://developerassessmentbackend.vercel.app/api/v1/health
 
 ## 📮 Postman Documentation
 
-> **Collection import:** [`POSTMAN.json`](./POSTMAN.json) in the repo root — 71 requests
+> **Collection import:** [`POSTMAN.json`](./POSTMAN.json) in the repo root — 70 requests
 > across 13 folders (Health, Authentication, Users, Admin, Problems, Assessments,
 > Invitations, Attempts, Submissions, Evaluation, Results, Payments, Error Responses),
 > 15 collection variables (`baseUrl` = production URL above), test scripts auto-capture
@@ -539,7 +539,7 @@ Project Name    : Developer Assessment & Coding Platform (Backend)
 Backend Repo    : https://github.com/mesbahtoha/Developer-Assessment-Platform-Backend-B7A6
 Live API        : https://developerassessmentbackend.vercel.app
 Live API (v1)   : https://developerassessmentbackend.vercel.app/api/v1
-API Docs        : POSTMAN.json (71 requests) + POSTMAN.md in repo root
+API Docs        : POSTMAN.json (70 requests) + POSTMAN.md in repo root
 Admin Email     : admin@assessment.com
 Admin Password  : Admin@1234
 ```
