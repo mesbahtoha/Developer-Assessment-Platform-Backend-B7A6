@@ -322,20 +322,20 @@ Examples:
              │ Business   │
              │ Logic      │
              │ Ownership  │
-             │ Transactions│
+             │Transactions│
              │ Caching    │
              └─────┬──────┘
                    │
-          ┌────────┴─────────┐
-          ▼                  ▼
-   ┌──────────────┐   ┌──────────────┐
-   │ Prisma ORM   │   │    Redis     │
-   └──────┬───────┘   └──────────────┘
-          │
-          ▼
-   ┌──────────────┐
-   │  PostgreSQL  │
-   └──────────────┘
+                   |               
+                   ▼                  
+           ┌──────────────┐   
+           │ Prisma ORM   │   
+           └──────┬───────┘   
+                  │
+                  ▼
+           ┌──────────────┐
+           │  PostgreSQL  │
+           └──────────────┘
 ```
 
 ### Layer Responsibilities
