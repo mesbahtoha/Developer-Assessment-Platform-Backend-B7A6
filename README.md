@@ -1387,16 +1387,9 @@ The demo video demonstrates the major backend workflows:
 2. Admin, recruiter, and candidate authentication
 3. RBAC and `403 Forbidden` demonstration
 4. Problem creation and management
-5. Assessment lifecycle
-6. Candidate invitation workflow
-7. Timed assessment attempt
-8. Submission and evaluation
-9. Validation/error handling
-10. Stripe Checkout
-11. Stripe webhook confirmation
-12. Redis/caching or another technical implementation highlight
+5. Stripe Checkout
 
-> **Demo Video:** Add the final Google Drive/video URL here after recording.
+> **Demo Video:** https://drive.google.com/drive/folders/1_qKsgPrjEhkb8LXbQGChMkOaYC-GiRTn?usp=drive_link
 
 ---
 
@@ -1554,42 +1547,6 @@ This project demonstrates practical backend engineering concepts beyond basic CR
 * **Automated end-to-end smoke testing**
 * **RBAC verification**
 * **Serverless deployment considerations**
-
----
-
-# 📄 Submission Summary
-
-```text
-Project Name
-Developer Assessment & Coding Platform — Backend API
-
-Backend Repository
-https://github.com/mesbahtoha/Developer-Assessment-Platform-Backend-B7A6
-
-Live API
-https://developerassessmentbackend.vercel.app
-
-API Base URL
-https://developerassessmentbackend.vercel.app/api/v1
-
-API Documentation
-POSTMAN.json + POSTMAN.md
-
-Database
-PostgreSQL + Prisma
-
-Payments
-Stripe Checkout + Webhooks + Refunds
-
-Cache
-Redis
-
-Deployment
-Vercel
-
-Roles
-ADMIN / RECRUITER / CANDIDATE
-```
 
 ---
 
