@@ -25,11 +25,33 @@ import prisma from './shared/prisma';
 
 const app: Application = express();
 
+// CORS allow-list. CLIENT_URL accepts a comma separated list of exact origins
+// and/or wildcard patterns (for example https://my-app-*.vercel.app) so that
+// production, preview deployments and local development can coexist.
+const allowedOriginPatterns = env.CLIENT_URL.split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+function isAllowedOrigin(origin: string): boolean {
+  return allowedOriginPatterns.some((pattern) => {
+    if (!pattern.includes('*')) return pattern === origin;
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+    return new RegExp(`^${escaped}$`).test(origin);
+  });
+}
+
 // Security middleware
 app.use(helmet());
 app.use(
   cors({
-    origin: env.CLIENT_URL.split(',').map((url) => url.trim()),
+    origin(origin, callback) {
+      // Same-origin, curl and server-to-server requests have no Origin header.
+      if (!origin || isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
   })
 );

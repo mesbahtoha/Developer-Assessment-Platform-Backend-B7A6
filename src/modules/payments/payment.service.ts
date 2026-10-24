@@ -12,6 +12,15 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY ?? '', {
   apiVersion: '2026-08-26.dahlia',
 });
 
+// Stripe redirects must use a single frontend origin even when CLIENT_URL holds
+// several comma separated origins for CORS. FRONTEND_URL takes precedence;
+// otherwise the first configured origin is used.
+const FRONTEND_BASE_URL = (
+  env.FRONTEND_URL?.trim() ||
+  env.CLIENT_URL.split(',')[0]?.trim() ||
+  'http://localhost:3000'
+).replace(/\/+$/, '');
+
 type SessionLike = {
   id: string;
   url?: string | null;
@@ -115,8 +124,8 @@ export const createCheckoutSession = async (
       },
     ],
     mode: 'payment',
-    success_url: `${env.CLIENT_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${env.CLIENT_URL}/payment/cancelled`,
+    success_url: `${FRONTEND_BASE_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${FRONTEND_BASE_URL}/payment/cancelled`,
     client_reference_id: assessmentId,
     metadata: { userId: user.id, assessmentId },
   })) as unknown as SessionLike;

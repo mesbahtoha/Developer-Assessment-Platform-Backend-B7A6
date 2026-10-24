@@ -1117,11 +1117,14 @@ GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 # Stripe
 STRIPE_SECRET_KEY="sk_test_xxx"
 STRIPE_WEBHOOK_SECRET="whsec_xxx"
-STRIPE_SUCCESS_URL="https://your-app.example.com/payment/success"
-STRIPE_CANCEL_URL="https://your-app.example.com/payment/cancel"
 
-# CORS
-CLIENT_URL="http://localhost:3000"
+# CORS: comma separated exact origins and/or wildcard patterns.
+# Wildcards are useful for Vercel preview deployments.
+CLIENT_URL="http://localhost:3000,https://your-app.vercel.app"
+
+# Public frontend origin used for Stripe success/cancel redirects.
+# Defaults to the first entry of CLIENT_URL when omitted.
+FRONTEND_URL="https://your-app.vercel.app"
 
 # Seed Admin
 ADMIN_NAME="Platform Admin"
